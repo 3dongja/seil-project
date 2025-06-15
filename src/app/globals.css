@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 추가로 원하는 전역 스타일도 여기 작성 가능 */
+body {
+  background-color: #f9fafb; /* 밝은 배경 */
+}
+.btn {
+  @apply bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700;
+}

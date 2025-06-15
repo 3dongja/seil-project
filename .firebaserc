@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "seil": "seil-project",
+    "default": "seil-project"
+  },
+  "targets": {},
+  "etags": {}
+}
