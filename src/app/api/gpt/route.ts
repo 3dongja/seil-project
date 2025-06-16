@@ -1,12 +1,5 @@
-// src/app/api/gpt/route.ts
-// ✅ 기존 기능 완전 통합 및 요금제별 기능 확장
-// ✨ Free: 1000자 제한 + 요약 제한 + 메시지 저장 + 안내 응답
-// ✨ Basic: GPT-3.5 1:1 AI 채팅 + 무제한 요약
-// ✨ Premium: GPT-4 1:1 AI 채팅 + 무제한 요약
-
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { adminDb as db, admin } from "@/lib/firebase-admin";
 import { OpenAI } from "openai";
 import { incrementFreePlanSummaryCount } from "@/hooks/utils/usageStatsLimiter";
 
@@ -20,8 +13,8 @@ export async function POST(req: NextRequest) {
     return new NextResponse("sellerId 또는 text 누락", { status: 400 });
   }
 
-  const sellerRef = doc(db, "sellers", sellerId);
-  const sellerSnap = await getDoc(sellerRef);
+  const sellerRef = db.collection("sellers").doc(sellerId);
+  const sellerSnap = await sellerRef.get();
   const plan = sellerSnap.data()?.plan || "free";
 
   if (text.length > 1000) {
@@ -38,9 +31,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await addDoc(collection(db, `chatLogs/${sellerId}/messages`), {
+    const messagesRef = db.collection("chatLogs").doc(sellerId).collection("messages");
+    await messagesRef.add({
       text,
-      createdAt: serverTimestamp(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
     const cannedResponse = `<상담 범위 안내>
@@ -48,10 +42,11 @@ export async function POST(req: NextRequest) {
 기술, 건강, 법률 등 일반 정보나 개인적 조언은 제공하지 않습니다.
 도움을 드릴 수 있는 문의를 남겨주세요.`;
 
-    await addDoc(collection(db, `chatLogs/${sellerId}/replies`), {
+    const repliesRef = db.collection("chatLogs").doc(sellerId).collection("replies");
+    await repliesRef.add({
       text,
       reply: cannedResponse,
-      createdAt: serverTimestamp(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
       metadata: {
         ip: req.headers.get("x-forwarded-for") || req.headers.get("host"),
         receivedAt: new Date().toISOString(),
@@ -75,17 +70,19 @@ export async function POST(req: NextRequest) {
   const reply = completion.choices[0].message?.content || "죄송합니다, 응답을 생성하지 못했습니다.";
 
   if (save) {
-    const threadRef = collection(db, "sellers", sellerId, "threads");
-    const threadDoc = await addDoc(threadRef, { createdAt: serverTimestamp(), userMessage: text });
-    await addDoc(collection(threadDoc, "messages"), {
+    const threadsRef = db.collection("sellers").doc(sellerId).collection("threads");
+    const threadDoc = await threadsRef.add({ createdAt: admin.firestore.FieldValue.serverTimestamp(), userMessage: text });
+
+    const threadMessagesRef = threadDoc.collection("messages");
+    await threadMessagesRef.add({
       sender: "user",
       content: text,
-      createdAt: serverTimestamp(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-    await addDoc(collection(threadDoc, "messages"), {
+    await threadMessagesRef.add({
       sender: "gpt",
       content: reply,
-      createdAt: serverTimestamp(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
   }
 
