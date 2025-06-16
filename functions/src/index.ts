@@ -2,6 +2,8 @@
 
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import { aggregateStats } from "./statsAggregator";
+
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const OpenAI = require("openai").default;
 
@@ -44,6 +46,7 @@ async function incrementUsageCount(sellerId: string) {
 
   return { blocked, count };
 }
+export { aggregateStats };
 
 export const helloWorld = functions.https.onRequest((req, res) => {
   res.send("Hello from Firebase Functions!");
@@ -56,6 +59,14 @@ export const onUserMessage = functions.firestore
     const data = snap.data();
 
     if (data.sender !== "user") return null;
+
+     // 월 채팅 사용량 집계 및 제한 체크 추가
+    const { blocked, count } = await incrementUsageCount(sellerId);
+    if (blocked) {
+      console.log(`❌ ${sellerId} 월 채팅 1,000회 초과, 응답 제한`);
+      // 차단 시 GPT 응답 메시지 저장 대신 종료 (원한다면 별도 알림 저장 가능)
+      return null;
+    }
 
     const sellerRef = db.doc(`sellers/${sellerId}`);
     const sellerSnap = await sellerRef.get();
@@ -73,7 +84,18 @@ export const onUserMessage = functions.firestore
     }
 
     if (!gptEnabled) return null;
-
+     
+    // 신규 메시지 알림 저장
+    const alertRef = db.collection(`sellers/${sellerId}/alerts`);
+    await alertRef.add({
+      type: "new_message",
+      chatId,
+      messageId: snap.id,
+      userId: data.userId || null,
+      createdAt: FieldValue.serverTimestamp(),
+      read: false,
+    });
+    
     const model = plan === "premium" ? "gpt-4" : "gpt-3.5-turbo";
     const apiKey = plan === "premium"
       ? functions.config().openai.gpt40
@@ -116,6 +138,24 @@ export const onUserMessage = functions.firestore
     } catch (err) {
       console.error("❌ GPT 오류:", err);
     }
+    exports.updateAdminActive = functions.pubsub
+  .schedule('every 9 minutes 30 seconds')
+  .onRun(async () => {
+    const usersSnap = await db.collection('users').get();
 
+    const now = admin.firestore.FieldValue.serverTimestamp();
+    const updates = [];
+
+    for (const userDoc of usersSnap.docs) {
+      const sellerRef = db.collection('users').doc(userDoc.id).collection('seller').doc('profile');
+      updates.push(
+        sellerRef.update({ lastAdminActive: now }).catch((e: any) => console.log(`❌ ${userDoc.id} 실패`, e))
+      );
+    }
+
+    await Promise.all(updates);
+    console.log('✅ lastAdminActive 갱신 완료');
+  });
+  
     return null;
   });

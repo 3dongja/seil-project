@@ -1,91 +1,67 @@
-// src/app/seller-logs/page.tsx
+/* /src/app/seller-logs/page.tsx */
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAuth } from "firebase/auth";
+import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
-import dayjs from "dayjs";
+import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
+import useUserRoles from "@/hooks/useUserRoles";
+
+interface Inquiry {
+  id: string;
+  summary: string;
+  customerName: string;
+  createdAt: string;
+}
 
 export default function SellerLogsPage() {
-  const [messages, setMessages] = useState<any[]>([]);
-  const [filter, setFilter] = useState("all");
-  const [selectedSummary, setSelectedSummary] = useState<string | null>(null);
-  const user = getAuth().currentUser;
+  const { user, isSeller, loading } = useUserRoles();
+  const [logs, setLogs] = useState<Inquiry[]>([]);
+  const router = useRouter();
 
   useEffect(() => {
-    const fetchMessages = async () => {
-      if (!user) return;
-      const sellerId = user.uid;
-      const snap = await getDocs(collection(db, "users", sellerId, "seller", "messages"));
-      const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setMessages(data);
-    };
-    fetchMessages();
-  }, [user]);
+    if (!loading && user && isSeller) {
+      setLogs([
+        {
+          id: "example-123",
+          summary: "환불 요청 - 김민수 010-1234-5678",
+          customerName: "김민수",
+          createdAt: "2024-06-16 10:12"
+        }
+      ]);
+    }
+  }, [loading, user, isSeller]);
 
-  const updateStatus = async (messageId: string, status: string) => {
-    if (!user) return;
-    const sellerId = user.uid;
-    const msgRef = doc(db, "users", sellerId, "seller", "messages", messageId);
-    await updateDoc(msgRef, { status });
-    setMessages(prev => prev.map(msg => msg.id === messageId ? { ...msg, status } : msg));
+  const handleDelete = async (id: string) => {
+    if (!user?.uid) return;
+    if (!confirm("정말 삭제하시겠습니까?")) return;
+    setLogs((prev) => prev.filter((log) => log.id !== id));
+    // 실제 삭제 로직은 아래 주석을 해제해 사용
+    // await deleteDoc(doc(db, "sellers", user.uid, "inquiries", id));
   };
 
-  const filteredMessages = filter === "all" ? messages : messages.filter(m => m.status === filter);
-
   return (
-    <div className="max-w-5xl mx-auto p-4 space-y-4">
-      <h2 className="text-xl font-bold">📄 상담 내역 관리</h2>
+    <main className="p-4 space-y-4">
+      <h1 className="text-xl font-bold">📨 상담 요약 로그</h1>
 
-      <div className="flex space-x-2">
-        <button onClick={() => setFilter("all")} className="px-3 py-1 rounded bg-gray-200">전체</button>
-        <button onClick={() => setFilter("처리 중")} className="px-3 py-1 rounded bg-yellow-300">처리 중</button>
-        <button onClick={() => setFilter("응답 완료")} className="px-3 py-1 rounded bg-green-300">응답 완료</button>
-      </div>
-
-      {filteredMessages.length === 0 ? (
-        <p>📭 해당 상태의 문의가 없습니다.</p>
-      ) : (
-        <div className="space-y-2">
-          {filteredMessages.map((msg, idx) => (
-            <div key={msg.id} className="flex items-center justify-between border rounded-xl p-3 bg-white shadow">
-              <div className="flex flex-col text-sm w-2/3">
-                <span className="font-medium">{msg.userName || msg.userId || "사용자"}</span>
-                <span className="text-gray-500">{msg.question}</span>
-                <span className="text-gray-400 text-xs">{msg.createdAt ? dayjs(msg.createdAt.toDate()).format("YYYY-MM-DD HH:mm") : "-"}</span>
-                {msg.summary && (
-                  <button
-                    onClick={() => setSelectedSummary(msg.summary)}
-                    className="text-blue-500 text-xs mt-1 underline w-fit"
-                  >
-                    요약 보기
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-col items-end text-right space-y-1 w-1/3">
-                <span className="text-xs text-gray-600">상태: {msg.status}</span>
-                <div className="flex space-x-1">
-                  <button onClick={() => updateStatus(msg.id, '응답 완료')} className="bg-green-500 text-white px-2 py-1 rounded text-xs">응답 완료</button>
-                  <button onClick={() => updateStatus(msg.id, '처리 중')} className="bg-yellow-500 text-white px-2 py-1 rounded text-xs">처리 중</button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {selectedSummary && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl shadow-lg max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-2">📌 상담 요약</h3>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedSummary}</p>
-            <div className="mt-4 text-right">
-              <button onClick={() => setSelectedSummary(null)} className="px-4 py-1 bg-blue-600 text-white rounded">닫기</button>
-            </div>
+      {logs.map((log) => (
+        <div
+          key={log.id}
+          className="border rounded-lg p-4 bg-white shadow hover:bg-gray-50 cursor-pointer relative"
+        >
+          <button
+            onClick={() => handleDelete(log.id)}
+            className="absolute top-2 right-2 text-sm text-red-500 hover:underline"
+          >
+            삭제
+          </button>
+          <div onClick={() => router.push(`/seller/chats/${log.id}`)}>
+            <p className="text-sm text-gray-500">{log.createdAt}</p>
+            <p className="font-medium">{log.customerName}</p>
+            <p className="text-sm text-gray-700">{log.summary}</p>
           </div>
         </div>
-      )}
-    </div>
+      ))}
+    </main>
   );
 }

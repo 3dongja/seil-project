@@ -45,7 +45,7 @@ export default function SellerInfoPage() {
     }
     if (user) {
       const sellerId = user.uid;
-      setLink(`https://seil.chat/seller/${sellerId}`);
+      setLink(`https://seil.ai.kr/seller/${sellerId}`);
 
       getDoc(doc(db, "users", sellerId, "seller", "profile")).then((snap) => {
         const data = snap.data() as DocumentData | undefined;
@@ -190,12 +190,7 @@ export default function SellerInfoPage() {
         </section>
       )}
 
-      <nav className="fixed bottom-0 left-0 w-full bg-white border-t flex justify-around py-2">
-        <button onClick={() => router.push("/seller-dashboard")}>📊 대시보드</button>
-        <button onClick={() => router.push("/community/chat")}>💬 채팅</button>
-        <button onClick={() => router.push("/community/message")}>✉️ 메시지</button>
-        <button onClick={() => router.push("/seller-info")}>📇 내 정보</button>
-      </nav>
+      
     </main>
   );
 }

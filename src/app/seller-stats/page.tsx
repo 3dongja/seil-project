@@ -12,6 +12,7 @@ export default function SellerStatsPage() {
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [topWords, setTopWords] = useState<string[]>([])
+  const [categoryData, setCategoryData] = useState<any[]>([])
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -25,6 +26,7 @@ export default function SellerStatsPage() {
       const timeMap = Array.from({ length: 24 }, () => 0)
       const dayMap = Array.from({ length: 7 }, () => 0)
       const wordCount: Record<string, number> = {}
+      const catCount: Record<string, number> = {}
 
       const msgDocs = await getDocs(collection(db, `users/${uid}/seller/messages`))
       msgDocs.forEach(doc => {
@@ -41,12 +43,17 @@ export default function SellerStatsPage() {
           .forEach((word: string) => {
             wordCount[word] = (wordCount[word] || 0) + 1
           })
+
+        const cat = data.summary?.category || "기타"
+        catCount[cat] = (catCount[cat] || 0) + 1
       })
 
       const topWords = Object.entries(wordCount)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
         .map(([word]) => word)
+
+      const categoryChart = Object.entries(catCount).map(([name, value]) => ({ name, value }))
 
       setStats({
         messages: msgSnap.data().count,
@@ -55,6 +62,7 @@ export default function SellerStatsPage() {
         byDay: dayMap
       })
       setTopWords(topWords)
+      setCategoryData(categoryChart)
       setLoading(false)
     }
     fetchStats()
@@ -94,7 +102,7 @@ export default function SellerStatsPage() {
         </ResponsiveContainer>
       </div>
 
-      <div>
+      <div className="mb-8">
         <h2 className="font-semibold mb-2">요일별 분포</h2>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={dayData}>
@@ -105,6 +113,18 @@ export default function SellerStatsPage() {
           </BarChart>
         </ResponsiveContainer>
       </div>
+
+      <div className="mb-8">
+        <h2 className="font-semibold mb-2">요약 카테고리 분포</h2>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={categoryData}>
+            <XAxis dataKey="name" fontSize={10} />
+            <YAxis allowDecimals={false} />
+            <Tooltip />
+            <Bar dataKey="value" fill="#facc15" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   )
-} 
+}
