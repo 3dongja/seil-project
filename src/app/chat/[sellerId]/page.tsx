@@ -83,7 +83,7 @@ export default function ConsumerChatPage() {
     const newChat = [...chat, `🙋‍♀️ ${input}`];
     setChat(newChat);
 
-    const res = await fetch("/api/gpt-chat", {
+    const res = await fetch("/api/gpt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt, userMessage: input })
