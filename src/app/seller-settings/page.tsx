@@ -76,8 +76,8 @@ export default function SellerSettingsPage() {
             placeholder="예: 이름과 날짜를 입력해주세요"
             maxLength={50}
           />
-          <p className="text-xs text-gray-400 mt-1">// 예시: 예약 날짜와 연락 가능한 번호를 알려주세요</p>
-          <p className="text-xs text-gray-400">// 예시: 문의하신 상품명을 입력해주세요</p>
+          <p className="text-xs text-gray-400 mt-1">예시: 예약 날짜와 연락 가능한 번호를 알려주세요</p>
+          <p className="text-xs text-gray-400">예시: 문의하신 상품명을 입력해주세요</p>
         </div>
 
         <div className="mb-4">
