@@ -17,35 +17,30 @@ export async function POST(req: NextRequest) {
     return new NextResponse("입력은 최대 1000자까지 가능합니다.", { status: 400 });
   }
 
-  // Free 요금제는 챗봇 사용 불가 (필요시 예외 처리 가능)
+  // Free 요금제: 사용량 제한 체크 + 안내 메시지 처리
   if (plan === "free") {
-    return new NextResponse(
-      JSON.stringify({ message: "챗봇 기능은 무료 요금제에서 지원하지 않습니다." }),
-      { status: 403 }
-    );
+    const { blocked } = await incrementFreePlanSummaryCount(sellerId);
+    if (blocked) {
+      return new NextResponse(
+        JSON.stringify({ message: "요약 횟수를 초과하였습니다. (일 5회, 월 20회 제한)" }),
+        { status: 429 }
+      );
+    }
   }
 
-  // OpenAI API 키 선택
-  const apiKey =
-    plan === "premium"
-      ? process.env.OPENAI_API_KEY_GPT40
-      : process.env.OPENAI_API_KEY_GPT35; // 기본은 3.5
-
+  const apiKey = process.env.OPENAI_API_KEY_GPT35; // 요약은 항상 3.5 사용
   if (!apiKey) {
     return new NextResponse("OpenAI API 키가 설정되지 않았습니다.", { status: 500 });
   }
 
   const openai = new OpenAI({ apiKey });
 
-  const model = plan === "premium" ? "gpt-4" : "gpt-3.5-turbo";
-
-  console.log("[DEBUG] model:", model);
-  console.log("[DEBUG] user text:", text);
+  const model = "gpt-3.5-turbo";
 
   const completion = await openai.chat.completions.create({
     model,
     messages: [
-      { role: "system", content: "당신은 친절한 상담 AI입니다." },
+      { role: "system", content: "당신은 친절한 요약 AI입니다." },
       { role: "user", content: text },
     ],
   });
@@ -53,18 +48,9 @@ export async function POST(req: NextRequest) {
   const reply = completion.choices[0].message?.content || "죄송합니다, 응답을 생성하지 못했습니다.";
 
   if (save) {
-    const threadsRef = db.collection("sellers").doc(sellerId).collection("threads");
-    const threadDoc = await threadsRef.add({ createdAt: admin.firestore.FieldValue.serverTimestamp(), userMessage: text });
-
-    const threadMessagesRef = threadDoc.collection("messages");
-    await threadMessagesRef.add({
-      sender: "user",
-      content: text,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-    await threadMessagesRef.add({
-      sender: "gpt",
-      content: reply,
+    await db.collection("sellers").doc(sellerId).collection("summaryLogs").add({
+      text,
+      reply,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
   }
