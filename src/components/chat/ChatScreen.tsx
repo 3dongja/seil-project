@@ -1,21 +1,32 @@
+// src/components/chat/ChatScreen.tsx
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { doc, getDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
 import KakaoChatInputBar from "@/components/chat/KakaoChatInputBar";
 
-interface ChatScreenProps {
+export interface ChatScreenProps {
   sellerId: string;
   userId: string;
-  category: string;
   prompt: string;
   welcomeMessage: string;
   statusColor: string;
+  category: string;
   industry: string;
   products: string;
   promptCue: string;
+
+  bubbleColor: string;
+  bubbleTextColor: string;
+  emojiAvatar: string;
+  bgImageUrl: string;
+  fontClass: string;
+  reverseBubble: boolean;
+}
+
+interface Message {
+  sender: "user" | "bot";
+  text: string;
+  type?: "text" | "image";
 }
 
 export default function ChatScreen({
@@ -24,69 +35,96 @@ export default function ChatScreen({
   category,
   prompt,
   welcomeMessage,
-  statusColor
+  statusColor,
+  bubbleColor,
+  bubbleTextColor,
+  emojiAvatar,
+  bgImageUrl,
+  fontClass,
+  reverseBubble,
 }: ChatScreenProps) {
   const [input, setInput] = useState("");
-  const [chat, setChat] = useState<string[]>([]);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const [chat, setChat] = useState<Message[]>([]);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const loadWelcome = async () => {
-      if (!sellerId) return;
-      const snap = await getDoc(doc(db, "sellers", sellerId, "settings", "chatbot"));
-      const data = snap.data();
-      if (data?.welcomeMessage) {
-        setChat([{ role: "bot", text: data.welcomeMessage }].map(m => `🤖 ${m.text}`));
-      } else {
-        setChat([{ role: "bot", text: "안녕하세요! 버튼을 눌러 대화를 시작해보세요." }].map(m => `🤖 ${m.text}`));
-      }
-    };
-    loadWelcome();
-  }, [sellerId]);
+    if (welcomeMessage) {
+      setChat([{ sender: "bot", text: welcomeMessage, type: "text" }]);
+    } else {
+      setChat([{ sender: "bot", text: "안녕하세요! 버튼을 눌러 대화를 시작해보세요.", type: "text" }]);
+    }
+  }, [welcomeMessage]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chat]);
 
   const handleSend = async () => {
     if (!input.trim()) return;
-    const newChat = [...chat, `🙋‍♀️ ${input}`];
-    setChat(newChat);
-    setLoading(true);
 
-    // 서버 API 요구사항에 맞춰 body 수정
-    const dataToSend = { sellerId, text: input };
-    console.log("[클라이언트] 보내는 데이터:", dataToSend);
+    const newUserMessage: Message = { sender: "user", text: input, type: "text" };
+    setChat((prev) => [...prev, newUserMessage]);
+    setLoading(true);
 
     const res = await fetch("/api/gpt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(dataToSend),
+      body: JSON.stringify({ sellerId, text: input }),
     });
 
     const data = await res.json();
-    setChat([...newChat, `🤖 ${data.reply}`]);
+
+    const botMessage: Message = {
+      sender: "bot",
+      text: data.reply || "죄송합니다, 응답을 받지 못했습니다.",
+      type: "text",
+    };
+
+    setChat((prev) => [...prev, botMessage]);
     setInput("");
     setLoading(false);
   };
 
-  const uploadImage = async (file: File) => {
-    const path = `chats/${userId}/${file.name}`;
-    const snap = await uploadBytes(ref(storage, path), file);
-    const url = await getDownloadURL(snap.ref);
-    setChat((prev) => [...prev, `🖼️ <img src="${url}" class="max-w-xs rounded-lg" />`]);
-  };
-
   return (
     <>
-      <div className="bg-gray-50 p-3 rounded shadow min-h-[300px] max-h-[50vh] overflow-y-auto space-y-2">
-        {chat.map((msg, i) => (
-          <div key={i} dangerouslySetInnerHTML={{ __html: msg }} className="whitespace-pre-wrap" />
-        ))}
+      <div
+        className={`p-3 rounded shadow min-h-[300px] max-h-[50vh] overflow-y-auto space-y-2 ${fontClass}`}
+        style={{
+          backgroundImage: bgImageUrl ? `url(${bgImageUrl})` : undefined,
+          backgroundSize: "cover",
+        }}
+      >
+        {chat.map((msg, i) => {
+          const isUser = msg.sender === "user";
+
+          const bubbleStyle = {
+            backgroundColor: bubbleColor,
+            color: bubbleTextColor,
+            borderRadius: 15,
+            maxWidth: "70%",
+            padding: "8px 12px",
+            marginLeft: isUser ? "auto" : reverseBubble ? undefined : 0,
+            marginRight: isUser ? (reverseBubble ? 0 : undefined) : "auto",
+            whiteSpace: "pre-wrap" as const,
+          };
+
+          return (
+            <div
+              key={i}
+              style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start" }}
+            >
+              <div style={bubbleStyle}>{msg.text}</div>
+            </div>
+          );
+        })}
         <div ref={bottomRef} />
       </div>
+
       <KakaoChatInputBar
         value={input}
         onChange={setInput}
         onSubmit={handleSend}
-        onImageUpload={uploadImage}
         disabled={loading}
       />
     </>
