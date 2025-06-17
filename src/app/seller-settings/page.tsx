@@ -29,8 +29,8 @@ export default function SellerSettingsPage() {
   }, [loading, user, isSeller]);
 
   useEffect(() => {
-    const { industry, products, promptCue, welcomeMessage } = form;
-    const prompt = `업종은 ${industry}, 판매상품은 ${products}입니다. 고객에게는 다음과 같이 안내하세요: "${welcomeMessage}" 유도 질문: ${promptCue}`;
+    const { industry, products, promptCue } = form;
+    const prompt = `업종은 ${industry}, 판매상품은 ${products}입니다. 고객의 질문에 친절히 응답하세요. 유도 질문: ${promptCue}`;
     setSystemPrompt(prompt);
   }, [form]);
 
@@ -78,12 +78,13 @@ export default function SellerSettingsPage() {
             <label className="font-medium flex justify-between items-center">
               💬 유도 질문 <span className="text-sm text-gray-500">{form.promptCue.length}/50자</span>
             </label>
-            <input
-              className="input w-full mt-1 border rounded px-3 py-2"
+            <textarea
+              className="input w-full mt-1 border rounded px-3 py-2 text-sm"
+              rows={2}
+              maxLength={50}
               value={form.promptCue}
               onChange={(e) => updateField("promptCue", e.target.value)}
               placeholder="예: 이름과 날짜를 입력해주세요"
-              maxLength={50}
             />
             <p className="text-xs text-gray-400 mt-1">예시: 예약 날짜와 연락 가능한 번호</p>
             <p className="text-xs text-gray-400">예시: 문의하신 상품명을 입력해주세요</p>
