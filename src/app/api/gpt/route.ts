@@ -8,8 +8,8 @@ export async function POST(req: NextRequest) {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
-  } catch (e) {
-    console.error("[TEST] JSON 파싱 실패:", e);
+  } catch (error) {
+    console.error("[TEST] JSON 파싱 실패:", error);
     return new NextResponse(JSON.stringify({ error: "JSON 파싱 실패" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
