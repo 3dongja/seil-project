@@ -90,11 +90,11 @@ export default function ConsumerChatPage() {
     checkStatus();
   }, [sellerId, category]);
 
-  const categories = ["주문", "예약", "상담", "문의", "반품", "교환", "1:1채팅"];
+  const categories = ["주문", "예약", "상담", "문의", "반품", "교환"];
 
   return (
     <div className="flex flex-col h-screen">
-      <div className="flex gap-2 px-4 pt-3 overflow-x-auto">
+      <div className="flex gap-3 px-4 pt-4 pb-2 overflow-x-auto">
         {categories.map((cat) => (
           <button
             key={cat}
@@ -104,7 +104,7 @@ export default function ConsumerChatPage() {
                 `업종은 ${industry}, 카테고리는 ${cat}, 판매상품은 ${products}입니다. 고객에게는 다음과 같이 안내하세요: "${welcomeMessage}" 유도 질문: ${promptCue}`
               );
             }}
-            className={`px-3 py-1 text-sm border rounded-full whitespace-nowrap ${
+            className={`px-4 py-2 text-lg border rounded-lg whitespace-nowrap shadow font-semibold transition ${
               cat === category ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-800"
             }`}
           >

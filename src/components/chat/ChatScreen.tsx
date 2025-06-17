@@ -42,6 +42,9 @@ export default function ChatScreen({
   bgImageUrl,
   fontClass,
   reverseBubble,
+  industry,
+  products,
+  promptCue,
 }: ChatScreenProps) {
   const [input, setInput] = useState("");
   const [chat, setChat] = useState<Message[]>([]);
@@ -52,7 +55,7 @@ export default function ChatScreen({
     if (welcomeMessage) {
       setChat([{ sender: "bot", text: welcomeMessage, type: "text" }]);
     } else {
-      setChat([{ sender: "bot", text: "안녕하세요! 버튼을 눌러 대화를 시작해보세요.", type: "text" }]);
+      setChat([{ sender: "bot", text: "위 카테고리를 클릭후 상담을 부탁드려요 .", type: "text" }]);
     }
   }, [welcomeMessage]);
 
@@ -70,7 +73,16 @@ export default function ChatScreen({
     const res = await fetch("/api/gpt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sellerId, text: input }),
+      body: JSON.stringify({
+        sellerId,
+        userId,
+        category,
+        industry,
+        products,
+        prompt,
+        promptCue,
+        text: input
+      }),
     });
 
     const data = await res.json();
@@ -112,8 +124,11 @@ export default function ChatScreen({
           return (
             <div
               key={i}
-              style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start" }}
+              style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start", alignItems: "center" }}
             >
+              {!isUser && (
+                <span style={{ fontSize: "1.5rem", marginRight: 6 }}>{emojiAvatar}</span>
+              )}
               <div style={bubbleStyle}>{msg.text}</div>
             </div>
           );
