@@ -6,14 +6,24 @@ import { getAuth } from "firebase/auth";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, doc, addDoc, getDoc, serverTimestamp } from "firebase/firestore";
 
+interface Conversation {
+  id: string;
+  name?: string;
+  lastMessage?: string;
+  unreadCount?: number;
+  status?: string;
+}
+
 export default function SellerLiveChatPage() {
-  const [conversations, setConversations] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [newMsg, setNewMsg] = useState("");
   const [newFile, setNewFile] = useState<File | null>(null);
   const [theme, setTheme] = useState<any>({});
   const [logAlerts, setLogAlerts] = useState<any[]>([]);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [userStatus, setUserStatus] = useState<Record<string, string>>({});
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const user = getAuth().currentUser;
 
@@ -31,9 +41,18 @@ export default function SellerLiveChatPage() {
     const fetchConversations = async () => {
       if (!user) return;
       const sellerId = user.uid;
-      const res = await getDocs(collection(db, "users", sellerId, "seller", "chatUsers"));
-      const convos = res.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const res = await getDocs(collection(db, "users", sellerId, "seller_conversations"));
+      const convos = res.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Conversation[];
       setConversations(convos);
+
+      const unread: Record<string, number> = {};
+      const status: Record<string, string> = {};
+      for (const convo of convos) {
+        unread[convo.id] = convo.unreadCount || 0;
+        status[convo.id] = convo.status || "gray";
+      }
+      setUnreadCounts(unread);
+      setUserStatus(status);
     };
     fetchConversations();
   }, [user]);
@@ -41,7 +60,7 @@ export default function SellerLiveChatPage() {
   useEffect(() => {
     const fetchMessages = async () => {
       if (!user || !selectedUser) return;
-      const res = await getDocs(collection(db, "users", user.uid, "seller", "messages", selectedUser, "thread"));
+      const res = await getDocs(collection(db, "users", user.uid, "seller_messages", selectedUser, "thread"));
       const msgs = res.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setMessages(msgs);
     };
@@ -51,7 +70,7 @@ export default function SellerLiveChatPage() {
   useEffect(() => {
     const fetchLogAlerts = async () => {
       if (!user) return;
-      const snap = await getDocs(collection(db, "users", user.uid, "seller", "messages"));
+      const snap = await getDocs(collection(db, "users", user.uid, "seller_alerts"));
       const logs = snap.docs.map(doc => doc.data()).filter(log => log.alert);
       setLogAlerts(logs);
     };
@@ -71,30 +90,44 @@ export default function SellerLiveChatPage() {
     if (newMsg.trim()) msgData.text = newMsg;
     if (newFile) msgData.fileUrl = URL.createObjectURL(newFile);
 
-    await addDoc(collection(db, "users", user.uid, "seller", "messages", selectedUser, "thread"), msgData);
+    await addDoc(collection(db, "users", user.uid, "seller_messages", selectedUser, "thread"), msgData);
     setNewMsg("");
     setNewFile(null);
     setSelectedUser(selectedUser);
   };
 
-  const bubbleStyle = theme.reverseBubble ? "self-end" : "self-start";
-  const bubbleColor = theme.bubbleColor || "bg-blue-100";
+  const bubbleStyle = (sender: string) =>
+    sender === "seller"
+      ? "self-end bg-blue-100 text-black"
+      : "self-start bg-gray-200 text-black";
+
   const fontClass = theme.fontClass || "";
   const sendButtonLabel = theme.sendButtonLabel || "전송";
 
   return (
-    <div className="flex h-screen divide-x" style={{ backgroundImage: `url(${theme.bgImageUrl || ''})`, backgroundSize: 'cover' }}>
+    <div className="flex h-screen divide-x relative" style={{ backgroundImage: `url(${theme.bgImageUrl || ''})`, backgroundSize: 'cover' }}>
       <div className="w-1/3 p-4 overflow-y-auto bg-white/80">
         <h2 className="text-lg font-bold mb-4">고객 목록</h2>
         {conversations.map((c) => (
-          <div key={c.id} className="p-2 border rounded mb-2 cursor-pointer hover:bg-gray-100"
+          <div key={c.id} className="p-2 border rounded mb-2 cursor-pointer hover:bg-gray-100 relative"
                onClick={() => setSelectedUser(c.id)}>
-            <div className="font-medium">{c.name || c.id}</div>
+            <div className="flex justify-between items-center">
+              <span className="font-medium">{c.name || c.id}</span>
+              <span className={`w-3 h-3 rounded-full ml-2 ${userStatus[c.id] === "green" ? "bg-green-500" : userStatus[c.id] === "yellow" ? "bg-yellow-400" : "bg-gray-400"}`}></span>
+            </div>
             <div className="text-xs text-gray-500">{c.lastMessage || "최근 메시지 없음"}</div>
+            {unreadCounts[c.id] > 0 && (
+              <span className="absolute top-1 right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                {unreadCounts[c.id]}
+              </span>
+            )}
           </div>
         ))}
       </div>
+
       <div className="flex-1 p-4 flex flex-col relative">
+        <button onClick={() => setSelectedUser(null)} className="absolute top-2 right-4 text-sm text-gray-600 hover:text-black">← 나가기</button>
+
         {logAlerts.length > 0 && (
           <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-yellow-100 text-sm px-4 py-2 rounded shadow z-10">
             {logAlerts.slice(0, 1).map((log, i) => (
@@ -110,7 +143,7 @@ export default function SellerLiveChatPage() {
           <>
             <div className="flex-1 overflow-y-auto space-y-2 pb-32">
               {messages.map((msg, i) => (
-                <div key={i} className={`${bubbleStyle} ${bubbleColor} ${fontClass} p-2 rounded max-w-md`}>
+                <div key={i} className={`${bubbleStyle(msg.sender)} ${fontClass} p-3 rounded-2xl shadow max-w-[75%]`}> 
                   {msg.text && <p>{msg.text}</p>}
                   {msg.fileUrl && <img src={msg.fileUrl} alt="uploaded" className="mt-1 max-w-xs rounded" />}
                 </div>
