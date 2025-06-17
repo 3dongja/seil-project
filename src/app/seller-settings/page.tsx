@@ -52,52 +52,65 @@ export default function SellerSettingsPage() {
     <main className="p-4 space-y-6 max-w-xl mx-auto">
       <h1 className="text-xl font-bold">⚙️ 챗봇 응답 설정</h1>
 
-      {/* 기존 설정 섹션 생략 가능: 여기에 GPT ON/OFF, 키워드 설정이 있다고 가정 */}
-
       <div className="mt-10 border-t pt-6">
         <h2 className="text-lg font-semibold mb-2">🧠 GPT 프롬프트 정보</h2>
 
-        <div className="mb-4">
-          <label className="font-medium">📦 업종</label>
-          <input className="input" value={form.industry} onChange={(e) => updateField("industry", e.target.value)} />
-        </div>
+        <div className="mb-8 p-5 border border-gray-200 rounded-lg bg-gray-50 shadow-sm space-y-5">
+          <div>
+            <label className="font-medium">📦 업종</label>
+            <input
+              className="input w-full mt-1 border rounded px-3 py-2"
+              value={form.industry}
+              onChange={(e) => updateField("industry", e.target.value)}
+            />
+          </div>
 
-        <div className="mb-4">
-          <label className="font-medium">🛍️ 판매상품</label>
-          <input className="input" value={form.products} onChange={(e) => updateField("products", e.target.value)} />
-        </div>
+          <div>
+            <label className="font-medium">🛍️ 판매상품</label>
+            <input
+              className="input w-full mt-1 border rounded px-3 py-2"
+              value={form.products}
+              onChange={(e) => updateField("products", e.target.value)}
+            />
+          </div>
 
-        <div className="mb-4">
-          <label className="font-medium flex justify-between items-center">💬 유도 질문 <span className="text-sm text-gray-500">{form.promptCue.length}/50자</span></label>
-          <input
-            className="input"
-            value={form.promptCue}
-            onChange={(e) => updateField("promptCue", e.target.value)}
-            placeholder="예: 이름과 날짜를 입력해주세요"
-            maxLength={50}
-          />
-          <p className="text-xs text-gray-400 mt-1">예시: 예약 날짜와 연락 가능한 번호를 알려주세요</p>
-          <p className="text-xs text-gray-400">예시: 문의하신 상품명을 입력해주세요</p>
-        </div>
+          <div>
+            <label className="font-medium flex justify-between items-center">
+              💬 유도 질문 <span className="text-sm text-gray-500">{form.promptCue.length}/50자</span>
+            </label>
+            <input
+              className="input w-full mt-1 border rounded px-3 py-2"
+              value={form.promptCue}
+              onChange={(e) => updateField("promptCue", e.target.value)}
+              placeholder="예: 이름과 날짜를 입력해주세요"
+              maxLength={50}
+            />
+            <p className="text-xs text-gray-400 mt-1">예시: 예약 날짜와 연락 가능한 번호</p>
+            <p className="text-xs text-gray-400">예시: 문의하신 상품명을 입력해주세요</p>
+          </div>
 
-        <div className="mb-4">
-          <label className="font-medium">👋 안내문 멘트</label>
-          <textarea
-            className="input"
-            rows={3}
-            value={form.welcomeMessage}
-            onChange={(e) => updateField("welcomeMessage", e.target.value)}
-          />
+          <div>
+            <label className="font-medium">👋 안내문 멘트</label>
+            <textarea
+              className="input w-full mt-1 border rounded px-3 py-2"
+              rows={3}
+              value={form.welcomeMessage}
+              onChange={(e) => updateField("welcomeMessage", e.target.value)}
+            />
+          </div>
         </div>
 
         <div className="mb-6">
           <label className="font-medium">🔍 GPT systemPrompt 미리보기</label>
-          <div className="p-3 border rounded bg-white text-sm text-gray-700 whitespace-pre-wrap">
+          <div className="p-4 border border-gray-300 rounded-lg shadow-sm bg-gray-50 text-sm text-gray-800 whitespace-pre-wrap">
             {systemPrompt}
           </div>
         </div>
 
-        <button onClick={handleSave} className="w-full py-3 bg-blue-600 text-white rounded font-bold">
+        <button
+          onClick={handleSave}
+          className="w-full py-3 bg-blue-600 text-white rounded font-bold"
+        >
           저장하기
         </button>
       </div>
