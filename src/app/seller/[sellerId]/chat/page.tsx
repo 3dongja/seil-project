@@ -26,9 +26,25 @@ export default function ConsumerChatPage() {
   const [chat, setChat] = useState<string[]>([
     "🤖 안녕하세요! 원하시는 서비스 카테고리 버튼을 누르시고 대화를 시작해주세요."
   ]);
+  // ✅ 안내문 상태 추가
+  const [welcomeMessage, setWelcomeMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [statusColor, setStatusColor] = useState("gray");
-  const [userId, setUserId] = useState<string>("");
+  const [statusColor, setStatusColor] = useState("// ✅ 안내문 불러오는 useEffect (sellerId 기준)
+  useEffect(() => {
+  const loadWelcomeMessage = async () => {
+    if (!sellerId) return;
+    const ref = doc(db, "sellers", sellerId, "settings", "chatbot");
+    const snap = await getDoc(ref);
+    const data = snap.data();
+    const welcome = data?.welcomeMessage?.trim();
+    if (welcome) {
+      setWelcomeMessage(welcome);
+      setChat([`🤖 ${welcome}`]);
+    }
+  };
+  loadWelcomeMessage();
+  }, [sellerId]);
+const [userId, setUserId] = useState<string>("");
 
   useEffect(() => {
     const storedId = localStorage.getItem("consumer_uid") || uuidv4();
