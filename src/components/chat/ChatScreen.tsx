@@ -52,8 +52,12 @@ export default function ChatScreen({
     const newChat = [...chat, `🙋‍♀️ ${input}`];
     setChat(newChat);
     setLoading(true);
-
-    const res = await fetch("/api/gpt", {
+  
+    // 디버깅용 로그 추가 및 필드명 수정
+  const dataToSend = { sellerId, text: input };
+  console.log("[클라이언트] 보내는 데이터:", dataToSend);
+    
+  const res = await fetch("/api/gpt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt, userMessage: input })

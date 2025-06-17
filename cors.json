@@ -1,8 +1,8 @@
 [
   {
-    "origin": ["http://localhost:3000"],
-    "method": ["GET", "POST", "PUT", "DELETE"],
-    "responseHeader": ["Content-Type", "Authorization"],
-    "maxAgeSeconds": 3600
+    "origin": ["https://seil.ai.kr"],
+    "method": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "maxAgeSeconds": 3600,
+    "responseHeader": ["Content-Type", "Authorization"]
   }
 ]

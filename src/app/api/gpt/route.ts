@@ -4,8 +4,12 @@ import { OpenAI } from "openai";
 import { incrementFreePlanSummaryCount } from "@/hooks/utils/usageStatsLimiter";
 
 export async function POST(req: NextRequest) {
-  const { sellerId, text, save = false } = await req.json();
+  const body = await req.json();
+  console.log("[DEBUG] 수신된 요청 바디:", body);
+
+  const { sellerId, text, save = false } = body;
   if (!sellerId || !text) {
+    console.warn("[DEBUG] sellerId 또는 text 누락:", body);
     return new NextResponse("sellerId 또는 text 누락", { status: 400 });
   }
 
@@ -14,29 +18,29 @@ export async function POST(req: NextRequest) {
   const plan = sellerSnap.data()?.plan || "free";
 
   if (text.length > 1000) {
+    console.warn("[DEBUG] 입력 글자수 초과:", text.length);
     return new NextResponse("입력은 최대 1000자까지 가능합니다.", { status: 400 });
   }
 
-  // Free 요금제는 챗봇 사용 불가 (필요시 예외 처리 가능)
   if (plan === "free") {
+    console.warn("[DEBUG] 무료 요금제 접근 차단");
     return new NextResponse(
       JSON.stringify({ message: "챗봇 기능은 무료 요금제에서 지원하지 않습니다." }),
       { status: 403 }
     );
   }
 
-  // OpenAI API 키 선택
   const apiKey =
     plan === "premium"
       ? process.env.OPENAI_API_KEY_GPT40
-      : process.env.OPENAI_API_KEY_GPT35; // 기본은 3.5
+      : process.env.OPENAI_API_KEY_GPT35;
 
   if (!apiKey) {
+    console.error("[DEBUG] OpenAI API 키 미설정");
     return new NextResponse("OpenAI API 키가 설정되지 않았습니다.", { status: 500 });
   }
 
   const openai = new OpenAI({ apiKey });
-
   const model = plan === "premium" ? "gpt-4" : "gpt-3.5-turbo";
 
   console.log("[DEBUG] model:", model);
@@ -51,6 +55,8 @@ export async function POST(req: NextRequest) {
   });
 
   const reply = completion.choices[0].message?.content || "죄송합니다, 응답을 생성하지 못했습니다.";
+
+  console.log("[DEBUG] GPT 응답:", reply);
 
   if (save) {
     const threadsRef = db.collection("sellers").doc(sellerId).collection("threads");
@@ -67,6 +73,7 @@ export async function POST(req: NextRequest) {
       content: reply,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+    console.log("[DEBUG] 대화 저장 완료");
   }
 
   return new NextResponse(JSON.stringify({ reply }), { status: 200 });
