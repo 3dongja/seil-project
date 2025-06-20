@@ -44,27 +44,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const openai = new OpenAI({ apiKey });
-    const model = plan === "premium" ? "gpt-4" : "gpt-3.5-turbo";
+   const openAiApiKey =
+  plan === "premium"
+    ? process.env.OPENAI_API_KEY_GPT40
+    : process.env.OPENAI_API_KEY_GPT35;
 
-    let reply = "죄송합니다. 응답 생성에 실패했습니다.";
+const model = plan === "premium" ? "gpt-4" : "gpt-3.5-turbo";
 
-    try {
-      const completion = await openai.chat.completions.create({
-        model,
-        messages: [
-          { role: "system", content: prompt },
-          { role: "user", content: text },
-        ],
-      });
-      reply = completion.choices[0].message?.content || reply;
-    } catch (error) {
-      console.error("[GPT 호출 실패]", error);
-      return new NextResponse(
-        JSON.stringify({ error: "GPT 호출 중 오류가 발생했습니다." }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
-    }
+const openai = new OpenAI({ apiKey: openAiApiKey });
+
+let reply = "죄송합니다. 응답 생성에 실패했습니다.";
+
+try {
+  const completion = await openai.chat.completions.create({
+    model,
+    messages: [
+      { role: "system", content: prompt },
+      { role: "user", content: text },
+    ],
+  });
+  reply = completion.choices[0].message?.content || reply;
+} catch (error) {
+  console.error("[GPT 호출 실패]", error);
+  return new NextResponse(
+    JSON.stringify({ error: "GPT 호출 중 오류가 발생했습니다." }),
+    { status: 500, headers: { "Content-Type": "application/json" } }
+  );
+}
 
     // Firestore 대화 저장
     if (save) {
