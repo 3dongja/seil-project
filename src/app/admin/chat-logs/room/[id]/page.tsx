@@ -1,5 +1,3 @@
-// src/app/admin/chat-logs/room/[id]/page.tsx
-
 import { db } from "@/lib/firebase";
 import { collection, getDocs } from "firebase/firestore";
 import { notFound } from "next/navigation";
@@ -12,7 +10,7 @@ interface Message {
   createdAt: any;
 }
 
-export default async function AdminChatLogPage({ params }: { params: { id: string } }) {
+export default async function AdminChatLogPage({ params }: any) {
   const [sellerId, inquiryId] = params.id.split("-");
 
   if (!sellerId || !inquiryId) return notFound();
