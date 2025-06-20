@@ -11,7 +11,7 @@ import CategoryForm from "@/components/chat/CategoryForm";
 
 const categories = ["주문", "예약", "상담", "문의", "반품", "교환", "기타"];
 
-export default function ChatSummaryPage({ params }: { params: { sellerId: string } }) {
+export default function ChatSummaryPage({ params }: any) {
   const router = useRouter();
   const sellerId = params.sellerId;
 
