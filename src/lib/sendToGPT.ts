@@ -1,6 +1,8 @@
 import { OpenAI } from "openai";
 
-const openai = new OpenAI();
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY_GPT35,
+});
 
 /**
  * GPT 응답을 생성하는 유틸 함수
