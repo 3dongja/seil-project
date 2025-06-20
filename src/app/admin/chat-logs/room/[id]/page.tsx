@@ -12,11 +12,7 @@ interface Message {
   createdAt: any;
 }
 
-interface PageProps {
-  params: { id: string };
-}
-
-export default async function AdminChatLogPage({ params }: PageProps) {
+export default async function AdminChatLogPage({ params }: { params: { id: string } }) {
   const [sellerId, inquiryId] = params.id.split("-");
 
   if (!sellerId || !inquiryId) return notFound();
