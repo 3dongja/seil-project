@@ -17,7 +17,7 @@ export default function SellerDashboardPage() {
   useEffect(() => {
     if (!loading && user && isSeller) {
       const sellerId = user.uid;
-      setLink(`https://seil.ai.kr/seller/${sellerId}/chat`);
+      setLink(`https://seil.ai.kr/chat-summary/${sellerId}`);
 
       const ref = doc(db, "sellers", sellerId, "settings", "chatbot");
       getDoc(ref).then((snap) => {
