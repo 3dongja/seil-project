@@ -1,147 +1,159 @@
 // src/components/chat/ChatScreen.tsx
-"use client";
 
-import { useEffect, useState, useRef } from "react";
-import KakaoChatInputBar from "@/components/chat/KakaoChatInputBar";
+import { useEffect, useRef, useState } from "react";
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, addDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import KakaoChatInputBar from "./KakaoChatInputBar";
 
-export interface ChatScreenProps {
+interface ChatMessageListProps {
+  messages?: any[]; // 선택 속성으로 수정
+  userType: "seller" | "consumer";
   sellerId: string;
-  userId: string;
-  prompt: string;
-  welcomeMessage: string;
-  statusColor: string;
-  category: string;
-  industry: string;
-  products: string;
-  promptCue: string;
-
-  bubbleColor: string;
-  bubbleTextColor: string;
-  emojiAvatar: string;
-  bgImageUrl: string;
-  fontClass: string;
-  reverseBubble: boolean;
+  inquiryId: string;
 }
 
-interface Message {
-  sender: "user" | "bot";
-  text: string;
-  type?: "text" | "image";
-}
+function ChatMessageList(props: ChatMessageListProps) {
+  const {
+    messages,
+    userType,
+    sellerId,
+    inquiryId
+  } = props;
 
-export default function ChatScreen({
-  sellerId,
-  userId,
-  category,
-  prompt,
-  welcomeMessage,
-  statusColor,
-  bubbleColor,
-  bubbleTextColor,
-  emojiAvatar,
-  bgImageUrl,
-  fontClass,
-  reverseBubble,
-  industry,
-  products,
-  promptCue,
-}: ChatScreenProps) {
-  const [input, setInput] = useState("");
-  const [chat, setChat] = useState<Message[]>([]);
-  const bottomRef = useRef<HTMLDivElement | null>(null);
-  const [loading, setLoading] = useState(false);
+  const safeMessages = messages ?? []; // 안전 대체 변수
 
-  useEffect(() => {
-    if (welcomeMessage) {
-      setChat([{ sender: "bot", text: welcomeMessage, type: "text" }]);
-    } else {
-      setChat([{ sender: "bot", text: "위 카테고리를 클릭후 상담을 부탁드려요 .", type: "text" }]);
-    }
-  }, [welcomeMessage]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat]);
-
-  const handleSend = async () => {
-    if (!input.trim()) return;
-
-    const newUserMessage: Message = { sender: "user", text: input, type: "text" };
-    setChat((prev) => [...prev, newUserMessage]);
-    setLoading(true);
-
-    const res = await fetch("/api/gpt", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sellerId,
-        userId,
-        category,
-        industry,
-        products,
-        prompt,
-        promptCue,
-        text: input
-      }),
+  const handleDelete = async (msgId: string) => {
+    const ok = confirm("메시지를 삭제하시겠습니까?");
+    if (!ok) return;
+    await updateDoc(doc(db, "sellers", sellerId, "inquiries", inquiryId, "messages", msgId), {
+      deleted: true,
     });
-
-    const data = await res.json();
-
-    const botMessage: Message = {
-      sender: "bot",
-      text: data.reply || "죄송합니다, 응답을 받지 못했습니다.",
-      type: "text",
-    };
-
-    setChat((prev) => [...prev, botMessage]);
-    setInput("");
-    setLoading(false);
   };
 
   return (
-    <>
-      <div
-        className={`p-3 rounded shadow min-h-[300px] max-h-[50vh] overflow-y-auto space-y-2 ${fontClass}`}
-        style={{
-          backgroundImage: bgImageUrl ? `url(${bgImageUrl})` : undefined,
-          backgroundSize: "cover",
-        }}
-      >
-        {chat.map((msg, i) => {
-          const isUser = msg.sender === "user";
-
-          const bubbleStyle = {
-            backgroundColor: bubbleColor,
-            color: bubbleTextColor,
-            borderRadius: 15,
-            maxWidth: "70%",
-            padding: "8px 12px",
-            marginLeft: isUser ? "auto" : reverseBubble ? undefined : 0,
-            marginRight: isUser ? (reverseBubble ? 0 : undefined) : "auto",
-            whiteSpace: "pre-wrap" as const,
-          };
-
+    <div className="space-y-2">
+      {safeMessages.map((msg: any) => {
+        if (msg.sender === "system") {
           return (
-            <div
-              key={i}
-              style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start", alignItems: "center" }}
-            >
-              {!isUser && (
-                <span style={{ fontSize: "1.5rem", marginRight: 6 }}>{emojiAvatar}</span>
-              )}
-              <div style={bubbleStyle}>{msg.text}</div>
+            <div key={msg.id} className="text-center text-xs italic text-gray-500 py-2">
+              {msg.deleted ? "삭제된 메시지입니다." : msg.text}
             </div>
           );
-        })}
-        <div ref={bottomRef} />
-      </div>
+        }
 
+        return (
+          <div
+            key={msg.id}
+            className={`flex ${msg.sender === userType ? "justify-end" : "justify-start"}`}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              if (msg.sender === userType) handleDelete(msg.id);
+            }}
+          >
+            <div
+              className={`max-w-xs rounded-2xl px-4 py-2 shadow text-sm whitespace-pre-line break-words ${
+                msg.sender === userType ? "bg-yellow-300 text-right" : "bg-gray-200 text-left"
+              }`}
+            >
+              {msg.deleted ? "삭제된 메시지입니다." : msg.text}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+interface ChatScreenProps {
+  sellerId: string;
+  inquiryId: string;
+  userType: "seller" | "consumer";
+}
+
+export default function ChatScreen({ sellerId, inquiryId, userType }: ChatScreenProps) {
+  const [messages, setMessages] = useState<any[]>([]);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const q = query(
+      collection(db, "sellers", sellerId, "inquiries", inquiryId, "messages"),
+      orderBy("createdAt", "asc")
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setMessages(data);
+    });
+    return () => unsubscribe();
+  }, [sellerId, inquiryId]);
+
+  // 판매자 진입 시 알림 해제
+  useEffect(() => {
+    if (userType === "seller") {
+      const ref = doc(db, "sellers", sellerId, "inquiries", inquiryId);
+      updateDoc(ref, { alert: false });
+    }
+  }, [sellerId, inquiryId, userType]);
+
+  // 요약 자동 출력 + 관리자 로그 저장
+  useEffect(() => {
+    if (userType !== "seller" || messages.length < 1) return;
+
+    const last = messages[messages.length - 1];
+    const hasSummary = messages.some((m) => m.sender === "system" || m.sender === "gpt");
+
+    if (last.sender === "consumer" && !hasSummary) {
+      fetch("/api/summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sellerId,
+          inquiryId,
+          messages: messages.filter((m) => m.text && !m.deleted).map((m) => ({ role: m.sender, content: m.text }))
+        }),
+      })
+        .then((res) => res.json())
+        .then(async (data) => {
+          const summary = data.summary ?? "요약을 생성할 수 없습니다.";
+
+          await Promise.all([
+            addDoc(collection(db, "sellers", sellerId, "inquiries", inquiryId, "messages"), {
+              sender: "system",
+              text: summary,
+              createdAt: new Date(),
+            }),
+            addDoc(collection(db, "admin", "chat-logs", "logs"), {
+              sellerId,
+              inquiryId,
+              reply: summary,
+              source: "auto-summary",
+              createdAt: new Date(),
+            })
+          ]);
+        })
+        .catch((err) => console.error("요약 실패:", err));
+    }
+  }, [messages, sellerId, inquiryId, userType]);
+
+  return (
+    <div className="flex flex-col h-full">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto bg-white px-2 py-4">
+        <ChatMessageList
+          userType={userType}
+          sellerId={sellerId}
+          inquiryId={inquiryId}
+          messages={messages}
+        />
+      </div>
       <KakaoChatInputBar
-        value={input}
-        onChange={setInput}
-        onSubmit={handleSend}
-        disabled={loading}
+        sellerId={sellerId}
+        inquiryId={inquiryId}
+        userType={userType}
+        scrollToBottom={() => {
+          if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+          }
+        }}
       />
-    </>
+    </div>
   );
 }

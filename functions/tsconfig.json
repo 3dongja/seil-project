@@ -5,9 +5,14 @@
     "module": "commonjs",
     "outDir": "lib",
     "rootDir": "src",
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["*"]
+    },
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true 
+    "skipLibCheck": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["tools", "lib", "node_modules"]
 }

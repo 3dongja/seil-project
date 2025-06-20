@@ -2,20 +2,23 @@
 
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import { aggregateStats } from "./statsAggregator";
+import { aggregateStats } from "./utils/statsAggregator";
+export { summary } from "./handlers/summary";
+export { cleanupSummaries } from "./handlers/cleanup";
 
-const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+import {
+  query,
+  collection,
+  orderBy,
+  onSnapshot,
+  doc,
+  updateDoc,
+
+} from "firebase/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 const OpenAI = require("openai").default;
 
-admin.initializeApp({
-  credential: admin.credential.cert({
-    projectId: functions.config().fb.project_id,
-    clientEmail: functions.config().fb.client_email,
-    privateKey: functions.config().fb.private_key.replace(/\\n/g, "\n"),
-  }),
-});
-
-const db = getFirestore();
+import { db } from "./lib/firebase-admin";
 
 async function incrementUsageCount(sellerId: string) {
   const ref = db.doc(`usageStats/${sellerId}`);
@@ -29,6 +32,9 @@ async function incrementUsageCount(sellerId: string) {
   }
 
   const data = snapshot.data();
+  if (!data) {
+    throw new Error(`사용자 usageStats/${sellerId} 문서에 데이터가 존재하지 않습니다.`);
+  }
   let count = data.monthlyCount || 0;
 
   if (data.lastMonth !== currentMonth) {

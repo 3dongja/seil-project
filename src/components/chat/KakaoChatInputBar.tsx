@@ -1,80 +1,97 @@
-import { useRef, useEffect } from "react";
-import { Button } from "@/components/ui/Button";
+// src/components/chat/KakaoChatInputBar.tsx
+import { useState, useRef, useEffect } from "react";
+import { addDoc, collection, serverTimestamp, doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
-interface ChatInputBarProps {
-  value: string;
-  onChange: (value: string) => void;
-  onSubmit: () => void;
-  onImageUpload?: (file: File) => void;
-  disabled?: boolean;
+interface KakaoChatInputBarProps {
+  sellerId: string;
+  inquiryId: string;
+  userType: "seller" | "consumer";
+  scrollToBottom?: () => void;
 }
 
-export default function KakaoChatInputBar({
-  value,
-  onChange,
-  onSubmit,
-  onImageUpload,
-  disabled = false,
-}: ChatInputBarProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+export default function KakaoChatInputBar({ sellerId, inquiryId, userType, scrollToBottom }: KakaoChatInputBarProps) {
+  const [text, setText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [sellerOnline, setSellerOnline] = useState(false);
+  const [chatHours, setChatHours] = useState<string>("");
 
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
-    }
-  }, [value]);
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      if (!disabled && value.trim()) {
-        onSubmit();
+    const fetchSellerStatus = async () => {
+      const statusRef = doc(db, "sellers", sellerId);
+      const statusSnap = await getDoc(statusRef);
+      if (statusSnap.exists()) {
+        const data = statusSnap.data();
+        setSellerOnline(!!data.online);
+        setChatHours(data.chatHours || "");
       }
-    }
+    };
+
+    fetchSellerStatus();
+  }, [sellerId]);
+
+  const handleSend = async () => {
+    if (!text.trim()) return;
+    await addDoc(collection(db, "sellers", sellerId, "inquiries", inquiryId, "messages"), {
+      text,
+      sender: userType,
+      createdAt: serverTimestamp(),
+    });
+    setText("");
+    scrollToBottom?.();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && onImageUpload) {
-      onImageUpload(file);
-      e.target.value = ""; // 같은 파일 다시 선택 가능하게 초기화
+    if (!file) return;
+
+    const maxSizeMB = 10;
+    if (file.size > maxSizeMB * 1024 * 1024) {
+      alert("첨부 파일은 10MB를 초과할 수 없습니다.");
+      return;
     }
+
+    // TODO: Firebase Storage 업로드 구현 필요
+    console.log("업로드할 파일:", file.name);
   };
 
   return (
-    <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-300 p-3 flex items-end gap-2 max-w-md mx-auto">
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={handleKeyDown}
-        rows={1}
-        placeholder="메시지를 입력하세요..."
-        className="flex-grow resize-none p-2 rounded-xl border border-gray-300 bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
-      />
-      <input
-        type="file"
-        accept="image/*"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        hidden
-      />
-      <button
-        type="button"
-        onClick={() => fileInputRef.current?.click()}
-        className="text-xl px-2"
-      >
-        📷
-      </button>
-      <Button
-        onClick={onSubmit}
-        disabled={disabled || !value.trim()}
-        className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
-      >
-        전송
-      </Button>
+    <div className="flex flex-col border-t border-gray-300 bg-black">
+      <div className="flex justify-between items-center px-4 py-1 text-sm text-white bg-gray-800">
+        <div>
+          {sellerOnline ? <span className="text-green-400">● 상담원 접속 중</span> : <span className="text-gray-400">● 상담원 부재중</span>}
+        </div>
+        {chatHours && <div className="text-gray-400">상담 가능 시간: {chatHours}</div>}
+      </div>
+
+      <div className="flex items-center px-3 py-2">
+        <button
+          className="text-white px-2"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          📎
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+        <input
+          type="text"
+          className="flex-1 px-3 py-2 text-white bg-transparent placeholder-gray-400 focus:outline-none"
+          placeholder="메시지를 입력하세요..."
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+        />
+        <button
+          onClick={handleSend}
+          className="text-white font-semibold px-3 py-2"
+        >
+          전송
+        </button>
+      </div>
     </div>
   );
 }
