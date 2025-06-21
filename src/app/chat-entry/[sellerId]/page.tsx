@@ -2,17 +2,9 @@
 
 import { getFirestore } from "firebase-admin/firestore";
 import { admin } from "@/lib/firebase-admin";
-import dynamic from "next/dynamic";
+import ChatScreenWrapper from "@/components/chat/ChatScreenWrapper";
 
-const ChatScreenWrapper = dynamic(() => import("@/components/chat/ChatScreenWrapper"), {
-  ssr: false,
-});
-
-interface Props {
-  params: { sellerId: string };
-}
-
-export default async function Page({ params }: Props) {
+export default async function Page({ params }: { params: { sellerId: string } }) {
   const { sellerId } = params;
   const firestore = getFirestore();
 
