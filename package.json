@@ -15,6 +15,7 @@
     "chart.js": "^4.4.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "copy-to-clipboard": "^3.3.3",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
     "firebase": "^11.9.0",
@@ -29,6 +30,7 @@
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
+    "react-qr-code": "^2.0.16",
     "recharts": "^2.15.3",
     "tailwind-merge": "^3.3.0",
     "tinycolor2": "^1.6.0"

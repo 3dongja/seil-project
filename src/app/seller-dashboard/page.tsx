@@ -7,6 +7,8 @@ import { useUser } from "@/hooks/useUser";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
 import { ClipboardIcon, ChatBubbleLeftRightIcon } from "@heroicons/react/24/solid";
+import QRCode from "react-qr-code";
+import copy from "copy-to-clipboard";
 
 interface Inquiry {
   id: string;
@@ -23,6 +25,7 @@ export default function SellerDashboard() {
   const [closeTime, setCloseTime] = useState("18:00");
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [copied, setCopied] = useState(false);
+  const [showQR, setShowQR] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -60,7 +63,7 @@ export default function SellerDashboard() {
   }, [user]);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(`https://seil.ai.kr/chat-summary/${user?.uid}`);
+    copy(`https://seil.ai.kr/chat-summary/${user?.uid}`);
     setCopied(true);
     toast.success("링크가 복사되었습니다");
     setTimeout(() => setCopied(false), 1500);
@@ -73,6 +76,13 @@ export default function SellerDashboard() {
       closeTime,
     }, { merge: true });
     toast.success("상담 가능 시간이 저장되었습니다");
+  };
+
+  const linkUrl = `https://seil.ai.kr/chat-summary/${user?.uid}`;
+  const snsLinks = {
+    twitter: `https://twitter.com/intent/tweet?text=상담링크&url=${encodeURIComponent(linkUrl)}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(linkUrl)}`,
+    kakao: `https://story.kakao.com/share?url=${encodeURIComponent(linkUrl)}`
   };
 
   return (
@@ -93,12 +103,23 @@ export default function SellerDashboard() {
       <div className="bg-white border rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="text-gray-700 font-medium">📎 나의 상담 링크</div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-          <span className="text-sm text-gray-500 break-all">https://seil.ai.kr/chat-summary/${user?.uid}</span>
+          <span className="text-sm text-gray-500 break-all">{linkUrl}</span>
           <button onClick={handleCopy} className="flex items-center gap-1 px-3 py-1 border rounded hover:bg-gray-100">
             <ClipboardIcon className="w-4 h-4" /> 복사
           </button>
+          <button onClick={() => setShowQR(!showQR)} className="text-sm text-blue-600 underline">QR 보기</button>
           {copied && <span className="text-green-600 text-sm">복사됨!</span>}
         </div>
+        {showQR && (
+          <div className="pt-2">
+            <QRCode value={linkUrl} size={128} />
+            <div className="flex gap-2 mt-2">
+              <a href={snsLinks.twitter} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 underline">트위터</a>
+              <a href={snsLinks.facebook} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 underline">페이스북</a>
+              <a href={snsLinks.kakao} target="_blank" rel="noopener noreferrer" className="text-sm text-yellow-600 underline">카카오</a>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="bg-white border rounded-lg p-4">
