@@ -7,21 +7,15 @@ import { db } from "@/lib/firebase";
 import KakaoChatInputBar from "./KakaoChatInputBar";
 
 interface ChatMessageListProps {
-  messages?: any[]; // 선택 속성으로 수정
+  messages?: any[];
   userType: "seller" | "consumer";
   sellerId: string;
   inquiryId: string;
 }
 
 function ChatMessageList(props: ChatMessageListProps) {
-  const {
-    messages,
-    userType,
-    sellerId,
-    inquiryId
-  } = props;
-
-  const safeMessages = messages ?? []; // 안전 대체 변수
+  const { messages, userType, sellerId, inquiryId } = props;
+  const safeMessages = messages ?? [];
 
   const handleDelete = async (msgId: string) => {
     const ok = confirm("메시지를 삭제하시겠습니까?");
@@ -87,7 +81,6 @@ export default function ChatScreen({ sellerId, inquiryId, userType }: ChatScreen
     return () => unsubscribe();
   }, [sellerId, inquiryId]);
 
-  // 판매자 진입 시 알림 해제
   useEffect(() => {
     if (userType === "seller") {
       const ref = doc(db, "sellers", sellerId, "inquiries", inquiryId);
@@ -95,7 +88,6 @@ export default function ChatScreen({ sellerId, inquiryId, userType }: ChatScreen
     }
   }, [sellerId, inquiryId, userType]);
 
-  // 요약 자동 출력 + 관리자 로그 저장
   useEffect(() => {
     if (userType !== "seller" || messages.length < 1) return;
 
@@ -145,16 +137,18 @@ export default function ChatScreen({ sellerId, inquiryId, userType }: ChatScreen
           messages={messages}
         />
       </div>
-      <KakaoChatInputBar
-        sellerId={sellerId}
-        inquiryId={inquiryId}
-        userType={userType}
-        scrollToBottom={() => {
-          if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-          }
-        }}
-      />
+      <div className="flex-shrink-0">
+        <KakaoChatInputBar
+          sellerId={sellerId}
+          inquiryId={inquiryId}
+          userType={userType}
+          scrollToBottom={() => {
+            if (scrollRef.current) {
+              scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            }
+          }}
+        />
+      </div>
     </div>
   );
 }

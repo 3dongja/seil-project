@@ -3,7 +3,17 @@
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, updateDoc, serverTimestamp, collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  serverTimestamp,
+  collection,
+  query,
+  orderBy,
+  limit,
+  onSnapshot
+} from "firebase/firestore";
 import useUserRoles from "@/hooks/useUserRoles";
 
 export default function SellerDashboardPage() {
@@ -29,7 +39,7 @@ export default function SellerDashboardPage() {
       const q = query(
         collection(db, "sellers", sellerId, "inquiries"),
         orderBy("createdAt", "desc"),
-        limit(1)
+        limit(10) // 🔁 10건 표시
       );
       const unsubscribe = onSnapshot(q, (snapshot) => {
         setInquiries(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
@@ -73,18 +83,19 @@ export default function SellerDashboardPage() {
           inquiries.map((inq) => (
             <div
               key={inq.id}
-              className="border p-3 rounded-lg bg-white shadow hover:bg-gray-50 cursor-pointer"
+              className="relative border p-3 rounded-lg bg-white shadow hover:bg-gray-50 cursor-pointer"
             >
               <p className="text-sm text-gray-500">{new Date(inq.createdAt?.seconds * 1000).toLocaleString()}</p>
               <p className="font-medium">{inq.name || "이름 없음"}</p>
               <p className="text-sm text-gray-700">{Object.values(inq.details || {}).join(", ")}</p>
+              {inq.alert && (
+                <span className="absolute top-2 right-2 text-red-500 text-xs font-bold">● 새 문의</span>
+              )}
             </div>
           ))
         ) : (
           <div className="border p-3 rounded-lg bg-white shadow">
-            <p className="text-sm text-gray-500">2024-06-16 10:13</p>
-            <p className="font-medium">홍길동</p>
-            <p className="text-sm text-gray-700">상품 관련 문의드립니다 (예시 데이터)</p>
+            <p className="text-sm text-gray-500">최근 문의가 없습니다.</p>
           </div>
         )}
       </section>
@@ -99,28 +110,28 @@ export default function SellerDashboardPage() {
       </div>
 
       <div className="border p-4 rounded bg-yellow-50">
-  <p className="font-semibold mb-2">⏱️ 상담 가능 시간 설정</p>
-  <div className="flex flex-wrap gap-2 items-center">
-    <div className="flex items-center gap-2">
-      <label className="text-sm font-medium whitespace-nowrap">오픈</label>
-      <input
-        type="time"
-        value={openTime}
-        onChange={(e) => setOpenTime(e.target.value)}
-        className="border px-2 py-1 rounded w-32"
-       />
+        <p className="font-semibold mb-2">⏱️ 상담 가능 시간 설정</p>
+        <div className="flex flex-col sm:flex-row sm:gap-4 gap-2">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium whitespace-nowrap">오픈</label>
+            <input
+              type="time"
+              value={openTime}
+              onChange={(e) => setOpenTime(e.target.value)}
+              className="border px-2 py-1 rounded w-full sm:w-32"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium whitespace-nowrap">마감</label>
+            <input
+              type="time"
+              value={closeTime}
+              onChange={(e) => setCloseTime(e.target.value)}
+              className="border px-2 py-1 rounded w-full sm:w-32"
+            />
+          </div>
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-      <label className="text-sm font-medium whitespace-nowrap">마감</label>
-      <input
-        type="time"
-        value={closeTime}
-        onChange={(e) => setCloseTime(e.target.value)}
-        className="border px-2 py-1 rounded w-32"
-       />
-      </div>
-     </div>
-    </div>
 
       <button onClick={handleSaveTimes} className="w-full py-3 bg-indigo-600 text-white rounded font-bold">
         설정 저장하기
