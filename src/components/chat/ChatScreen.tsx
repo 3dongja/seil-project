@@ -63,9 +63,11 @@ interface ChatScreenProps {
   sellerId: string;
   inquiryId: string;
   userType: "seller" | "consumer";
+  searchTerm?: string;
+  sortOrder?: "asc" | "desc";
 }
 
-export default function ChatScreen({ sellerId, inquiryId, userType }: ChatScreenProps) {
+export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm = "", sortOrder = "desc" }: ChatScreenProps) {
   const [messages, setMessages] = useState<any[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -127,17 +129,25 @@ export default function ChatScreen({ sellerId, inquiryId, userType }: ChatScreen
     }
   }, [messages, sellerId, inquiryId, userType]);
 
+  const filteredMessages = messages
+    .filter((msg) => msg.text.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => {
+      const aTime = a.createdAt?.seconds || 0;
+      const bTime = b.createdAt?.seconds || 0;
+      return sortOrder === "asc" ? aTime - bTime : bTime - aTime;
+    });
+
   return (
-    <div className="flex flex-col h-full">
-      <div ref={scrollRef} className="flex-1 overflow-y-auto bg-white px-2 py-4">
+    <div className="flex flex-col h-full overflow-hidden relative">
+      <div className="flex-1 overflow-y-auto bg-white px-2 py-4 pb-24" ref={scrollRef}>
         <ChatMessageList
           userType={userType}
           sellerId={sellerId}
           inquiryId={inquiryId}
-          messages={messages}
+          messages={filteredMessages}
         />
       </div>
-      <div className="flex-shrink-0">
+      <div className="absolute bottom-0 left-0 right-0 bg-white border-t z-10">
         <KakaoChatInputBar
           sellerId={sellerId}
           inquiryId={inquiryId}
