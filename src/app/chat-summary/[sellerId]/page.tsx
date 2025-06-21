@@ -1,10 +1,10 @@
-// src/app/chat-summary/[sellerId]/page.tsx
+""// src/app/chat-summary/[sellerId]/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { db, storage } from "@/lib/firebase";
-import { doc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, updateDoc, serverTimestamp, collection, query, orderBy, limit, getDocs } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { v4 as uuid } from "uuid";
 import CategoryForm from "@/components/chat/CategoryForm";
@@ -23,6 +23,8 @@ const ChatSummaryPage = () => {
   const [categoryData, setCategoryData] = useState<Record<string, string>>({});
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [openTime, setOpenTime] = useState("");
+  const [closeTime, setCloseTime] = useState("");
 
   const handleSave = async () => {
     if (!name || !phone || Object.values(categoryData).some(v => !v)) {
@@ -82,11 +84,22 @@ const ChatSummaryPage = () => {
         await updateDoc(refDoc, { summary: data.summary });
       }
 
-      router.push("/seller-logs");
+      router.push(`/chat-summary/${sellerId}/${id}`);
     } catch (err) {
       alert("저장 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChatRedirect = async () => {
+    const q = query(collection(db, "sellers", sellerId, "inquiries"), orderBy("createdAt", "desc"), limit(1));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      const latest = snap.docs[0].id;
+      router.push(`/chat-summary/${sellerId}/${latest}`);
+    } else {
+      alert("진행 중인 채팅이 없습니다.");
     }
   };
 
@@ -107,6 +120,20 @@ const ChatSummaryPage = () => {
             {cat}
           </button>
         ))}
+      </div>
+
+      <div className="border p-4 rounded bg-yellow-50">
+        <p className="font-semibold mb-2">⏱️ 상담 가능 시간 설정</p>
+        <div className="flex flex-col sm:flex-row sm:gap-4 gap-2 items-start sm:items-center">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium">오픈</label>
+            <input type="time" value={openTime} onChange={(e) => setOpenTime(e.target.value)} className="border px-2 py-1 rounded w-32" />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium">마감</label>
+            <input type="time" value={closeTime} onChange={(e) => setCloseTime(e.target.value)} className="border px-2 py-1 rounded w-32" />
+          </div>
+        </div>
       </div>
 
       <CategoryForm category={category} onChange={setCategoryData} />
@@ -170,7 +197,7 @@ const ChatSummaryPage = () => {
 
       <div className="pt-2 text-center">
         <button
-          onClick={() => router.push(`/chat/${sellerId}`)}
+          onClick={handleChatRedirect}
           className="text-sm text-blue-600 underline"
         >
           1:1 채팅으로 바로가기

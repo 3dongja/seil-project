@@ -99,14 +99,28 @@ export default function SellerDashboardPage() {
       </div>
 
       <div className="border p-4 rounded bg-yellow-50">
-        <p className="font-semibold mb-2">⏱️ 상담 가능 시간 설정</p>
-        <div className="flex gap-4 items-center">
-          <label className="text-sm font-medium">오픈</label>
-          <input type="time" value={openTime} onChange={(e) => setOpenTime(e.target.value)} className="border px-2 py-1 rounded" />
-          <label className="text-sm font-medium">마감</label>
-          <input type="time" value={closeTime} onChange={(e) => setCloseTime(e.target.value)} className="border px-2 py-1 rounded" />
-        </div>
+  <p className="font-semibold mb-2">⏱️ 상담 가능 시간 설정</p>
+  <div className="flex flex-wrap gap-2 items-center">
+    <div className="flex items-center gap-2">
+      <label className="text-sm font-medium whitespace-nowrap">오픈</label>
+      <input
+        type="time"
+        value={openTime}
+        onChange={(e) => setOpenTime(e.target.value)}
+        className="border px-2 py-1 rounded w-32"
+       />
       </div>
+      <div className="flex items-center gap-2">
+      <label className="text-sm font-medium whitespace-nowrap">마감</label>
+      <input
+        type="time"
+        value={closeTime}
+        onChange={(e) => setCloseTime(e.target.value)}
+        className="border px-2 py-1 rounded w-32"
+       />
+      </div>
+     </div>
+    </div>
 
       <button onClick={handleSaveTimes} className="w-full py-3 bg-indigo-600 text-white rounded font-bold">
         설정 저장하기
