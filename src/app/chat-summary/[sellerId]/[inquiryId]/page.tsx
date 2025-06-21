@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import ChatScreen from "@/components/chat/ChatScreen";
 import { db } from "@/lib/firebase";
