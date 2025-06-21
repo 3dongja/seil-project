@@ -1,17 +1,15 @@
-// page.tsx
+// 파일 위치: src/app/chat-summary/[sellerId]/[inquiryId]/page.tsx
+
 "use client";
 
-import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import ChatScreen from "@/components/chat/ChatScreen";
+import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import ChatScreen from "@/components/chat/ChatScreen";
 
 export default function Page() {
-  const { sellerId, inquiryId } = useParams() as {
-    sellerId: string;
-    inquiryId: string;
-  };
+  const { sellerId, inquiryId } = useParams() as { sellerId: string; inquiryId: string };
 
   const [openTime, setOpenTime] = useState("");
   const [closeTime, setCloseTime] = useState("");
@@ -38,4 +36,4 @@ export default function Page() {
       />
     </>
   );
-} 
+}
