@@ -11,7 +11,7 @@ import CategoryForm from "@/components/chat/CategoryForm";
 
 const categories = ["주문", "예약", "상담", "문의", "반품", "교환", "기타"];
 
-export default function ChatSummaryPage({ params }: any) {
+export default function ChatSummaryPage({ params }: { params: { sellerId: string } }) {
   const router = useRouter();
   const sellerId = params.sellerId;
 
@@ -37,7 +37,7 @@ export default function ChatSummaryPage({ params }: any) {
     setLoading(true);
 
     const id = uuid();
-    let fileUrl = null;
+    let fileUrl: string | null = null;
 
     try {
       if (file) {
@@ -61,6 +61,8 @@ export default function ChatSummaryPage({ params }: any) {
       const refDoc = doc(db, "sellers", sellerId, "inquiries", id);
       await setDoc(refDoc, summaryInput);
 
+      const text = (`카테고리: ${category}\n` + Object.entries(categoryData || {}).map(([k, v]) => `${k}: ${v}`).join("\n")).slice(0, 1000);
+
       const res = await fetch("/api/summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -70,8 +72,9 @@ export default function ChatSummaryPage({ params }: any) {
           name,
           phone,
           category,
-          details: categoryData
-        })
+          details: categoryData,
+          text
+        } as Record<string, any>)
       });
       const data = await res.json();
 

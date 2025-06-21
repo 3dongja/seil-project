@@ -4,9 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb as db, admin } from "@/lib/firebase-admin";
 import { incrementFreePlanSummaryCount } from "@/hooks/utils/usageStatsLimiter";
-import { OpenAI } from "openai";
-
-const openai = new OpenAI();
+import { sendToGPT } from "@/lib/sendToGPT";
 
 export async function POST(req: NextRequest) {
   try {
@@ -71,16 +69,12 @@ export async function POST(req: NextRequest) {
 - 말머리 제거: "고객은", "요약:" 금지
 - 1~2문장 간결 요약`;
 
-    const chat = await openai.chat.completions.create({
+    const reply = await sendToGPT({
+      text,
+      systemPrompt,
       model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: text },
-      ],
       temperature: 0.3,
     });
-
-    const reply = chat.choices[0].message.content?.trim();
 
     if (!reply) {
       return new NextResponse("요약 생성 실패", { status: 500 });
