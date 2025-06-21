@@ -1,20 +1,22 @@
-// FirestoreReset.tsx
 "use client";
 import { useState } from "react";
-import { deleteCollection } from "@/lib/firestore-utils"; // 유틸 함수 필요
-
-const collections = ["sellers", "sellerInfo", "inquiries", "messages"];
 
 export default function FirestoreReset() {
   const [loading, setLoading] = useState(false);
 
   const handleReset = async () => {
     setLoading(true);
-    for (const col of collections) {
-      await deleteCollection(col);
+    try {
+      const res = await fetch("/api/reset-firestore", {
+        method: "POST",
+      });
+      const result = await res.json();
+      alert(result.message);
+    } catch {
+      alert("초기화 실패");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-    alert("Firestore 초기화 완료");
   };
 
   return (
