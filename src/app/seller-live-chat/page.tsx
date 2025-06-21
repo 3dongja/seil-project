@@ -1,9 +1,7 @@
 // src/app/seller-live-chat/page.tsx
-import dynamic from "next/dynamic";
+"use client";
 
-const SellerLiveChatWrapper = dynamic(() => import("@/components/chat/SellerLiveChatWrapper"), {
-  ssr: false,
-});
+import SellerLiveChatWrapper from "@/components/chat/SellerLiveChatWrapper";
 
 export default function SellerLiveChatPage() {
   return <SellerLiveChatWrapper />;
