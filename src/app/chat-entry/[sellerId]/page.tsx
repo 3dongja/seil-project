@@ -16,10 +16,6 @@ export default async function Page({ params }: { params: { sellerId: string } })
     .limit(1)
     .get();
 
-  if (snapshot.empty) {
-    return <div className="p-4 text-center">진행 중인 문의가 없습니다.</div>;
-  }
-
-  const inquiryId = snapshot.docs[0].id;
+  const inquiryId = snapshot.empty ? "none" : snapshot.docs[0].id;
   redirect(`/chat-summary/${sellerId}/${inquiryId}`);
 }
