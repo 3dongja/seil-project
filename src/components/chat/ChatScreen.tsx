@@ -1,5 +1,6 @@
 // src/components/chat/ChatScreen.tsx
 
+"use client";
 import { useEffect, useRef, useState } from "react";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, addDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
