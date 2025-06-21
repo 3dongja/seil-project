@@ -2,13 +2,21 @@
 
 import { getFirestore } from "firebase-admin/firestore";
 import { admin } from "@/lib/firebase-admin";
-import ChatScreen from "@/components/chat/ChatScreen";
+import ChatScreenWrapper from "@/components/chat/ChatScreenWrapper";
 
-export default async function Page({ params }: { params: { sellerId: string } }) {
-  const { sellerId } = params;
+interface PageParams {
+  params: Record<string, string>;
+}
+
+export default async function Page({ params }: PageParams) {
+  const sellerId = params.sellerId;
   const firestore = getFirestore();
 
-  const settingsRef = firestore.collection("sellers").doc(sellerId).collection("settings").doc("chatbot");
+  const settingsRef = firestore
+    .collection("sellers")
+    .doc(sellerId)
+    .collection("settings")
+    .doc("chatbot");
   const settingsSnap = await settingsRef.get();
 
   if (!settingsSnap.exists) {
@@ -19,7 +27,10 @@ export default async function Page({ params }: { params: { sellerId: string } })
   const openTime = settings?.openTime ?? "00:00";
   const closeTime = settings?.closeTime ?? "23:59";
 
-  const inquiriesRef = firestore.collection("sellers").doc(sellerId).collection("inquiries");
+  const inquiriesRef = firestore
+    .collection("sellers")
+    .doc(sellerId)
+    .collection("inquiries");
   const q = inquiriesRef
     .where("status", "==", "open")
     .orderBy("createdAt", "desc")
@@ -34,10 +45,9 @@ export default async function Page({ params }: { params: { sellerId: string } })
         <div className="text-sm text-center text-gray-600 py-2">
           상담 가능 시간: {openTime} ~ {closeTime}
         </div>
-        <ChatScreen
+        <ChatScreenWrapper
           sellerId={sellerId}
           inquiryId={firstInquiry.id}
-          userType="consumer"
         />
       </>
     );
