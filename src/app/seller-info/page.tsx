@@ -51,7 +51,7 @@ export default function SellerInfoPage() {
     }
     if (user) {
       const sellerId = user.uid;
-      setLink(`https://seil.ai.kr/seller/${sellerId}`);
+      setLink(`https://seil.ai.kr/chat-summary/${user?.uid}`);
 
       getDoc(doc(db, "users", sellerId, "seller", "profile")).then((snap) => {
         const data = snap.data() as DocumentData | undefined;
