@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -61,10 +60,10 @@ export default function SellerDashboard() {
   }, [user]);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(`https://seil.chat/chat-entry/${user?.uid}`);
+    navigator.clipboard.writeText(`https://seil.chat/chat-summary/${user?.uid}`);
     setCopied(true);
     toast.success("링크가 복사되었습니다");
-    setTimeout(() => setCopied(false), 3000);
+    setTimeout(() => setCopied(false), 1500);
   };
 
   const handleTimeChange = async () => {
@@ -94,10 +93,11 @@ export default function SellerDashboard() {
       <div className="bg-white border rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="text-gray-700 font-medium">📎 나의 상담 링크</div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-          <span className="text-sm text-gray-500 break-all">https://seil.chat/chat-entry/{user?.uid}</span>
+          <span className="text-sm text-gray-500 break-all">https://seil.chat/chat-summary/{user?.uid}</span>
           <button onClick={handleCopy} className="flex items-center gap-1 px-3 py-1 border rounded hover:bg-gray-100">
             <ClipboardIcon className="w-4 h-4" /> 복사
           </button>
+          {copied && <span className="text-green-600 text-sm">복사됨!</span>}
         </div>
       </div>
 
