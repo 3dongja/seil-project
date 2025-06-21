@@ -6,7 +6,7 @@ import ChatScreen from "@/components/chat/ChatScreen";
 
 export default async function Page({ params }: { params: { sellerId: string } }) {
   const { sellerId } = params;
-  const firestore = getFirestore(); // ✅ admin 인수 제거
+  const firestore = getFirestore();
 
   const settingsRef = firestore.collection("sellers").doc(sellerId).collection("settings").doc("chatbot");
   const settingsSnap = await settingsRef.get();
