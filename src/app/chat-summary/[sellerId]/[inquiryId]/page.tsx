@@ -5,14 +5,11 @@ import ChatScreen from "@/components/chat/ChatScreen";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
-interface PageProps {
-  params: {
-    sellerId: string;
-    inquiryId: string;
-  };
-}
-
-export default function ConsumerChatPage({ params }: PageProps) {
+export default function ConsumerChatPage({
+  params,
+}: {
+  params: { sellerId: string; inquiryId: string };
+}) {
   const [openTime, setOpenTime] = useState<string>("");
   const [closeTime, setCloseTime] = useState<string>("");
 
