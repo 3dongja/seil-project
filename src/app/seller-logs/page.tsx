@@ -64,47 +64,49 @@ export default function SellerLogsPage() {
   };
 
   return (
-    <main className="p-4 space-y-4">
-      <h1 className="text-xl font-bold">📨 상담 요약 로그</h1>
+    <main className="p-4 h-screen overflow-y-auto">
+      <h1 className="text-xl font-bold mb-4">📨 상담 요약 로그</h1>
 
-      {logs.map((log) => (
-        <div
-          key={log.id}
-          className="border rounded-lg p-4 bg-white shadow hover:bg-gray-50 cursor-pointer relative"
-        >
-          <button
-            onClick={() => handleDelete(log)}
-            className="absolute top-2 right-2 text-sm text-red-500 hover:underline"
+      <div className="space-y-4">
+        {logs.map((log) => (
+          <div
+            key={log.id}
+            className="border rounded-lg p-4 bg-white shadow hover:bg-gray-50 cursor-pointer relative"
           >
-            삭제
-          </button>
-          <div onClick={() => router.push(`/seller/chats/${log.id}`)}>
-            <p className="text-sm text-gray-500">
-              {log.createdAt?.seconds
-                ? new Date(log.createdAt.seconds * 1000).toLocaleString()
-                : "시간 정보 없음"}
-            </p>
-            <p className="font-medium">
-              {log.name} / {log.phone}
-            </p>
-            <p className="text-sm text-gray-700">
-              {log.category} 관련 문의 - {log.summary ? "요약됨" : "요약 준비 중"}
-            </p>
-            {log.summary && (
-              <p className="text-sm text-gray-600 italic mt-1">
-                📝 {log.summary.slice(0, 80)}...
+            <button
+              onClick={() => handleDelete(log)}
+              className="absolute top-2 right-2 text-sm text-red-500 hover:underline"
+            >
+              삭제
+            </button>
+            <div onClick={() => router.push(`/seller-live-chat?seller=${user!.uid}&inquiry=${log.id}`)}>
+              <p className="text-sm text-gray-500">
+                {log.createdAt?.seconds
+                  ? new Date(log.createdAt.seconds * 1000).toLocaleString()
+                  : "시간 정보 없음"}
               </p>
-            )}
-            {log.fileUrl && (
-              <p className="text-sm text-blue-600 underline mt-1">
-                <a href={log.fileUrl} target="_blank" rel="noopener noreferrer">
-                  📎 첨부파일 보기
-                </a>
+              <p className="font-medium">
+                {log.name} / {log.phone}
               </p>
-            )}
+              <p className="text-sm text-gray-700">
+                {log.category} 관련 문의 - {log.summary ? "요약됨" : "요약 준비 중"}
+              </p>
+              {log.summary && (
+                <p className="text-sm text-gray-600 italic mt-1">
+                  📝 {log.summary.slice(0, 80)}...
+                </p>
+              )}
+              {log.fileUrl && (
+                <p className="text-sm text-blue-600 underline mt-1">
+                  <a href={log.fileUrl} target="_blank" rel="noopener noreferrer">
+                    📎 첨부파일 보기
+                  </a>
+                </p>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </main>
   );
 }
