@@ -175,7 +175,7 @@ const ChatSummaryPage: FC<PageProps> = ({ params }) => {
 
       <div className="pt-2 text-center">
         <button
-          onClick={() => alert("1:1 채팅 연결 준비 중입니다.")}
+          onClick={() => router.push(`/chat/${sellerId}`)}
           className="text-sm text-blue-600 underline"
         >
           1:1 채팅으로 바로가기

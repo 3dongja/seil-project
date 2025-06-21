@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, updateDoc, serverTimestamp, collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
 import useUserRoles from "@/hooks/useUserRoles";
 
 export default function SellerDashboardPage() {
@@ -12,7 +12,7 @@ export default function SellerDashboardPage() {
   const [copied, setCopied] = useState(false);
   const [openTime, setOpenTime] = useState("09:00");
   const [closeTime, setCloseTime] = useState("22:00");
-  const [chatOn, setChatOn] = useState(true);
+  const [inquiries, setInquiries] = useState<any[]>([]);
 
   useEffect(() => {
     if (!loading && user && isSeller) {
@@ -24,16 +24,27 @@ export default function SellerDashboardPage() {
         const data = snap.data();
         if (data?.openTime) setOpenTime(data.openTime);
         if (data?.closeTime) setCloseTime(data.closeTime);
-        if (data?.chatOn !== undefined) setChatOn(data.chatOn);
+      });
+
+      const q = query(
+        collection(db, "sellers", sellerId, "inquiries"),
+        orderBy("createdAt", "desc"),
+        limit(1)
+      );
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        setInquiries(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
       });
 
       const interval = setInterval(() => {
         updateDoc(doc(db, "users", sellerId, "seller", "profile"), {
           lastAdminActive: serverTimestamp(),
         });
-      }, 570000); // 9분 30초
+      }, 570000);
 
-      return () => clearInterval(interval);
+      return () => {
+        clearInterval(interval);
+        unsubscribe();
+      };
     }
   }, [loading, user, isSeller]);
 
@@ -46,7 +57,7 @@ export default function SellerDashboardPage() {
   const handleSaveTimes = async () => {
     if (!user?.uid) return;
     const ref = doc(db, "sellers", user.uid, "settings", "chatbot");
-    await updateDoc(ref, { openTime, closeTime, chatOn });
+    await updateDoc(ref, { openTime, closeTime });
     alert("저장 완료!");
   };
 
@@ -58,16 +69,24 @@ export default function SellerDashboardPage() {
 
       <section className="space-y-2">
         <h2 className="font-semibold">🕓 최근 상담 미리보기</h2>
-        {[1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="border p-3 rounded-lg bg-white shadow hover:bg-gray-50 cursor-pointer"
-          >
-            <p className="text-sm text-gray-500">2024-06-16 10:1{i}</p>
-            <p className="font-medium">홍길동{i}</p>
+        {inquiries.length > 0 ? (
+          inquiries.map((inq) => (
+            <div
+              key={inq.id}
+              className="border p-3 rounded-lg bg-white shadow hover:bg-gray-50 cursor-pointer"
+            >
+              <p className="text-sm text-gray-500">{new Date(inq.createdAt?.seconds * 1000).toLocaleString()}</p>
+              <p className="font-medium">{inq.name || "이름 없음"}</p>
+              <p className="text-sm text-gray-700">{Object.values(inq.details || {}).join(", ")}</p>
+            </div>
+          ))
+        ) : (
+          <div className="border p-3 rounded-lg bg-white shadow">
+            <p className="text-sm text-gray-500">2024-06-16 10:13</p>
+            <p className="font-medium">홍길동</p>
             <p className="text-sm text-gray-700">상품 관련 문의드립니다 (예시 데이터)</p>
           </div>
-        ))}
+        )}
       </section>
 
       <div className="border p-4 rounded bg-gray-50">
@@ -87,16 +106,6 @@ export default function SellerDashboardPage() {
           <label className="text-sm font-medium">마감</label>
           <input type="time" value={closeTime} onChange={(e) => setCloseTime(e.target.value)} className="border px-2 py-1 rounded" />
         </div>
-      </div>
-
-      <div className="border p-4 rounded bg-blue-50 space-y-2">
-        <p className="font-semibold">🤖 챗봇 상태</p>
-        <button
-          onClick={() => setChatOn((prev) => !prev)}
-          className={`w-full py-3 font-bold rounded text-white transition ${chatOn ? "bg-green-600 hover:bg-green-700" : "bg-gray-500 hover:bg-gray-600"}`}
-        >
-          {chatOn ? "✅ 챗봇 응답 사용 중" : "⛔ 챗봇 꺼짐 (직접 응대)"}
-        </button>
       </div>
 
       <button onClick={handleSaveTimes} className="w-full py-3 bg-indigo-600 text-white rounded font-bold">
