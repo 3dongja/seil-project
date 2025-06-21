@@ -4,8 +4,8 @@ import { getFirestore } from "firebase-admin/firestore";
 import { admin } from "@/lib/firebase-admin";
 import ChatScreenWrapper from "@/components/chat/ChatScreenWrapper";
 
-export default async function Page({ params }: { params: { sellerId: string } }) {
-  const { sellerId } = params;
+export default async function Page(props: any) {
+  const { sellerId } = props.params as { sellerId: string };
   const firestore = getFirestore();
 
   const settingsRef = firestore
