@@ -8,16 +8,17 @@ import { doc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { v4 as uuid } from "uuid";
 import CategoryForm from "@/components/chat/CategoryForm";
-
-const categories = ["주문", "예약", "상담", "문의", "반품", "교환", "기타"];
+import type { FC } from "react";
 
 interface PageProps {
   params: { sellerId: string };
 }
 
-  export default function ChatSummaryPage({ params }: PageProps) {
+const ChatSummaryPage: FC<PageProps> = ({ params }) => {
   const router = useRouter();
   const sellerId = params.sellerId;
+
+  const categories = ["주문", "예약", "상담", "문의", "반품", "교환", "기타"];
 
   const [category, setCategory] = useState("상담");
   const [name, setName] = useState("");
@@ -182,4 +183,6 @@ interface PageProps {
       </div>
     </main>
   );
-}
+};
+
+export default ChatSummaryPage;
