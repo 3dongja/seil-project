@@ -3,8 +3,12 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where, orderBy, limit } from "firebase/firestore";
 
-export default async function Page({ params }: { params: { sellerId: string } }) {
-  const sellerId = params.sellerId;
+interface PageProps {
+  params: { sellerId: string };
+}
+
+export default async function Page({ params }: PageProps) {
+  const { sellerId } = params;
 
   const q = query(
     collection(db, "sellers", sellerId, "inquiries"),
