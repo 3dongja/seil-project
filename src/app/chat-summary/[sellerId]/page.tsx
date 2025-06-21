@@ -1,10 +1,10 @@
-""// src/app/chat-summary/[sellerId]/page.tsx
+// src/app/chat-summary/[sellerId]/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { db, storage } from "@/lib/firebase";
-import { doc, setDoc, updateDoc, serverTimestamp, collection, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { doc, setDoc, updateDoc, serverTimestamp, collection, query, orderBy, limit, getDocs, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { v4 as uuid } from "uuid";
 import CategoryForm from "@/components/chat/CategoryForm";
@@ -25,6 +25,17 @@ const ChatSummaryPage = () => {
   const [loading, setLoading] = useState(false);
   const [openTime, setOpenTime] = useState("");
   const [closeTime, setCloseTime] = useState("");
+
+  useEffect(() => {
+    const fetchTimes = async () => {
+      const refDoc = doc(db, "sellers", sellerId, "settings", "chatbot");
+      const snap = await getDoc(refDoc);
+      const data = snap.data();
+      if (data?.openTime) setOpenTime(data.openTime);
+      if (data?.closeTime) setCloseTime(data.closeTime);
+    };
+    fetchTimes();
+  }, [sellerId]);
 
   const handleSave = async () => {
     if (!name || !phone || Object.values(categoryData).some(v => !v)) {
@@ -123,15 +134,15 @@ const ChatSummaryPage = () => {
       </div>
 
       <div className="border p-4 rounded bg-yellow-50">
-        <p className="font-semibold mb-2">⏱️ 상담 가능 시간 설정</p>
-        <div className="flex flex-col sm:flex-row sm:gap-4 gap-2 items-start sm:items-center">
+        <p className="font-semibold mb-2">⏱️ 상담 가능 시간</p>
+        <div className="flex flex-wrap gap-4 items-center">
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium">오픈</label>
-            <input type="time" value={openTime} onChange={(e) => setOpenTime(e.target.value)} className="border px-2 py-1 rounded w-32" />
+            <input type="time" value={openTime} readOnly className="border px-2 py-1 rounded w-28 bg-gray-100 text-gray-500" />
           </div>
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium">마감</label>
-            <input type="time" value={closeTime} onChange={(e) => setCloseTime(e.target.value)} className="border px-2 py-1 rounded w-32" />
+            <input type="time" value={closeTime} readOnly className="border px-2 py-1 rounded w-28 bg-gray-100 text-gray-500" />
           </div>
         </div>
       </div>
