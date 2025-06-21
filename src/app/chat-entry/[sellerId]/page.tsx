@@ -3,11 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where, orderBy, limit } from "firebase/firestore";
 
-interface PageProps {
-  params: { sellerId: string };
-}
-
-export default async function Page({ params }: PageProps) {
+export default async function Page({ params }: { params: { sellerId: string } }) {
   const { sellerId } = params;
 
   const q = query(
