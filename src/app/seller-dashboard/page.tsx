@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -19,8 +20,8 @@ interface Inquiry {
 
 export default function SellerDashboard() {
   const { user } = useUser();
-  const [openTime, setOpenTime] = useState(10);
-  const [closeTime, setCloseTime] = useState(18);
+  const [openTime, setOpenTime] = useState("10:00");
+  const [closeTime, setCloseTime] = useState("18:00");
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [copied, setCopied] = useState(false);
 
@@ -31,8 +32,8 @@ export default function SellerDashboard() {
     getDoc(ref).then(snap => {
       if (snap.exists()) {
         const data = snap.data();
-        setOpenTime(data.openTime || 10);
-        setCloseTime(data.closeTime || 18);
+        setOpenTime(data.openTime || "10:00");
+        setCloseTime(data.closeTime || "18:00");
       }
     });
 
@@ -68,7 +69,10 @@ export default function SellerDashboard() {
 
   const handleTimeChange = async () => {
     if (!user) return;
-    await setDoc(doc(db, "sellers", user.uid), { openTime, closeTime }, { merge: true });
+    await setDoc(doc(db, "sellers", user.uid), {
+      openTime,
+      closeTime,
+    }, { merge: true });
     toast.success("상담 가능 시간이 저장되었습니다");
   };
 
@@ -80,9 +84,9 @@ export default function SellerDashboard() {
         <label className="font-medium text-indigo-700 block mb-1">🕒 상담 가능 시간 설정</label>
         <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0 items-start sm:items-center">
           <label className="text-sm">시작</label>
-          <input type="number" value={openTime} onChange={e => setOpenTime(Number(e.target.value))} className="border px-2 py-1 rounded w-full sm:w-20" />
+          <input type="time" value={openTime} onChange={e => setOpenTime(e.target.value)} className="border px-2 py-1 rounded w-full sm:w-32" />
           <label className="text-sm">종료</label>
-          <input type="number" value={closeTime} onChange={e => setCloseTime(Number(e.target.value))} className="border px-2 py-1 rounded w-full sm:w-20" />
+          <input type="time" value={closeTime} onChange={e => setCloseTime(e.target.value)} className="border px-2 py-1 rounded w-full sm:w-32" />
           <button onClick={handleTimeChange} className="bg-indigo-600 text-white px-3 py-1 rounded w-full sm:w-auto">저장</button>
         </div>
       </div>
@@ -100,8 +104,8 @@ export default function SellerDashboard() {
       <div className="bg-white border rounded-lg p-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2">
           <h2 className="font-semibold">📩 최근 문의</h2>
-          <Link href="/seller-live-chat" className="text-blue-600 text-sm flex items-center gap-1">
-            <ChatBubbleLeftRightIcon className="w-4 h-4" /> 실시간 상담창
+          <Link href={`/chat-summary/${user?.uid}`} className="text-blue-600 text-sm flex items-center gap-1">
+            <ChatBubbleLeftRightIcon className="w-4 h-4" /> 요약 보기
           </Link>
         </div>
         <ul className="space-y-2">
