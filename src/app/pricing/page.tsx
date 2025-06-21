@@ -1,5 +1,4 @@
-// src/app/pricing/page.tsx
-
+// 🔧 src/app/pricing/page.tsx (스타일 유지 + 요약 기반 콘텐츠)
 "use client";
 
 import { useEffect, useState } from "react";
@@ -13,20 +12,19 @@ const plans = [
     name: "Free",
     price: "0원",
     features: [
-      "❌ 1:1 AI 채팅 없음",
-      "✅ GPT 요약 제공 (하루 5회 / 월 20회 제한)"
+      "✅ 요약 기능 월 100회 제공",
+      "❌ 추가 사용 불가"
     ],
     value: "free",
     highlight: false,
-    description: ""
+    description: "체험용 요금제"
   },
   {
     name: "Basic",
     price: "월 9,900원",
     features: [
-      "✅ GPT-3.5 (Basic) 1:1 AI 채팅봇",
-      "gpt 요약제공 무제한",
-      "→ 채팅봇 1,000회 초과 시 건당 100원씩 별도 과금됨"
+      "✅ 요약 기능 월 2,000회 제공",
+      "초과 시 자동 차단 처리"
     ],
     value: "basic",
     highlight: true,
@@ -36,13 +34,12 @@ const plans = [
     name: "Premium",
     price: "월 49,900원",
     features: [
-      "✅ GPT-4.0 (Premium) 1:1 AI 채팅봇",
-      "gpt 요약제공 무제한",
-      "→ 채팅봇 1,000회 초과 시 건당 100원씩 별도 과금됨"
+      "✅ 요약 기능 월 10,000회 제공",
+      "대규모 고객 대응용 최적화"
     ],
     value: "premium",
     highlight: true,
-    description: "최고 성능 사람같은AI 추천"
+    description: "최고 성능 요금제"
   },
 ];
 
@@ -102,7 +99,7 @@ export default function PricingPage() {
         })}
       </div>
       <p className="text-[11px] text-gray-400 text-center mt-8">
-        * 요금제별 기능은 이용 조건 및 GPT API 정책에 따라 일부 변경될 수 있습니다.
+        * 요약 횟수는 GPT 처리 기준으로 계산되며, 시스템 정책에 따라 일부 변경될 수 있습니다.
       </p>
     </div>
   );

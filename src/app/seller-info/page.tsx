@@ -27,6 +27,12 @@ interface PlanLog {
   newPlan?: string;
 }
 
+const PLAN_LABEL: Record<string, string> = {
+  free: "Free 요금제",
+  basic: "Basic 요금제",
+  premium: "Premium 요금제",
+};
+
 export default function SellerInfoPage() {
   const { user, isSeller, loading } = useUserRoles();
   const router = useRouter();
@@ -110,15 +116,15 @@ export default function SellerInfoPage() {
     router.push("/pricing");
   };
 
-  const isGptBlocked = stats.자동응답횟수 >= 1000 && !gptEnabled;
+  const isSummaryBlocked = stats.자동응답횟수 >= 1000 && !gptEnabled;
 
   return (
     <main className="min-h-screen p-4 pb-32 space-y-6">
       <BackButton />
 
-      {isGptBlocked && (
+      {isSummaryBlocked && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-md text-sm">
-          ⚠️ 자동응답이 1000회를 초과하여 중단되었습니다. 요금제를 업그레이드하면 계속 사용할 수 있습니다.
+          ⚠️ 요약 사용량이 제한을 초과하여 중단되었습니다. 요금제를 업그레이드하면 계속 사용할 수 있습니다.
           <button
             onClick={handleLinkVisit}
             className="ml-2 underline text-blue-700 hover:text-blue-900"
@@ -132,8 +138,8 @@ export default function SellerInfoPage() {
           <div><strong>업체명:</strong> {sellerData.name}</div>
           <div><strong>설명:</strong> {sellerData.description}</div>
           <div><strong>가입일:</strong> {sellerData.createdAt?.toDate().toLocaleDateString()}</div>
-          <div><strong>요금제:</strong> {sellerData.plan || "없음"}</div>
-          <div><strong>이번 달 사용량:</strong> {usageCount !== null ? `${usageCount}건` : "로딩 중..."}</div>
+          <div><strong>요금제:</strong> {PLAN_LABEL[sellerData.plan || "free"]}</div>
+          <div><strong>이번 달 요약 사용량:</strong> {usageCount !== null ? `${usageCount}회` : "로딩 중..."}</div>
         </section>
       )}
 
@@ -189,8 +195,6 @@ export default function SellerInfoPage() {
           </ul>
         </section>
       )}
-
-      
     </main>
   );
 }

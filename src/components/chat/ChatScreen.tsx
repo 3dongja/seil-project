@@ -1,10 +1,16 @@
 // src/components/chat/ChatScreen.tsx
-
 "use client";
+
 import { useEffect, useRef, useState } from "react";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, addDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import KakaoChatInputBar from "./KakaoChatInputBar";
+
+function formatTime(timestamp: any) {
+  if (!timestamp) return "";
+  const date = new Date(timestamp.seconds * 1000);
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
 
 interface ChatMessageListProps {
   messages?: any[];
@@ -39,18 +45,21 @@ function ChatMessageList(props: ChatMessageListProps) {
         return (
           <div
             key={msg.id}
-            className={`flex ${msg.sender === userType ? "justify-end" : "justify-start"}`}
+            className={`flex flex-col ${msg.sender === userType ? "items-end" : "items-start"}`}
             onContextMenu={(e) => {
               e.preventDefault();
               if (msg.sender === userType) handleDelete(msg.id);
             }}
           >
             <div
-              className={`max-w-xs rounded-2xl px-4 py-2 shadow text-sm whitespace-pre-line break-words ${
+              className={`max-w-xs rounded-2xl px-4 py-2 shadow text-sm whitespace-pre-line break-words mb-1 ${
                 msg.sender === userType ? "bg-yellow-300 text-right" : "bg-gray-200 text-left"
               }`}
             >
               {msg.deleted ? "삭제된 메시지입니다." : msg.text}
+            </div>
+            <div className="text-xs text-gray-400">
+              {formatTime(msg.createdAt)}
             </div>
           </div>
         );
@@ -67,7 +76,7 @@ interface ChatScreenProps {
   sortOrder?: "asc" | "desc";
 }
 
-export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm = "", sortOrder = "desc" }: ChatScreenProps) {
+export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm = "", sortOrder = "asc" }: ChatScreenProps) {
   const [messages, setMessages] = useState<any[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -137,9 +146,15 @@ export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm =
       return sortOrder === "asc" ? aTime - bTime : bTime - aTime;
     });
 
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [filteredMessages]);
+
   return (
-    <div className="flex flex-col h-full overflow-hidden relative">
-      <div className="flex-1 overflow-y-auto bg-white px-2 py-4 pb-24" ref={scrollRef}>
+    <div className="flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 overflow-y-auto px-2 py-4" ref={scrollRef}>
         <ChatMessageList
           userType={userType}
           sellerId={sellerId}
@@ -147,7 +162,7 @@ export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm =
           messages={filteredMessages}
         />
       </div>
-      <div className="absolute bottom-0 left-0 right-0 bg-white border-t z-10">
+      <div className="sticky bottom-0 left-0 right-0 bg-white border-t z-10">
         <KakaoChatInputBar
           sellerId={sellerId}
           inquiryId={inquiryId}

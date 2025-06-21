@@ -27,12 +27,14 @@ export default function ChargePage() {
     setTimeout(() => setLoading(false), 1000)
   }
 
+  const chargeOptions = [10000, 30000, 50000, 100000]
+
   return (
     <div className="max-w-md mx-auto mt-10 p-4">
       <h1 className="text-xl font-bold text-center mb-4">💳 충전하기</h1>
 
       <div className="space-y-3 mb-6">
-        {[30000, 50000, 99000].map((amount) => (
+        {chargeOptions.map((amount) => (
           <button
             key={amount}
             onClick={() => setSelected(amount)}
@@ -41,12 +43,6 @@ export default function ChargePage() {
             {amount.toLocaleString()}원 충전
           </button>
         ))}
-        <button
-          onClick={() => setSelected(100000)}
-          className={`w-full px-4 py-2 rounded border ${selected === 100000 ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'} hover:shadow`}
-        >
-          100,000원 충전
-        </button>
       </div>
 
       <button
@@ -58,7 +54,8 @@ export default function ChargePage() {
       </button>
 
       <p className="text-xs text-gray-500 mt-6 text-center">
-        * 충전 후 관리자 승인까지 최대 1시간 소요될 수 있습니다.
+        * 충전 후 관리자 승인까지 최대 1시간 소요될 수 있습니다.<br />
+        * 요약 요청은 기준 초과 시 1회당 100원이 차감됩니다.
       </p>
     </div>
   )

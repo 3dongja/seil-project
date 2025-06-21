@@ -1,61 +1,41 @@
 // src/app/api/summary/route.ts
-"use server";
+import { NextResponse } from "next/server";
+import { db } from "@/lib/firebase";
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  Timestamp,
+  getDocs,
+  query,
+  where
+} from "firebase/firestore";
+import OpenAI from "openai";
 
-import { NextRequest, NextResponse } from "next/server";
-import { adminDb as db, admin } from "@/lib/firebase-admin";
-import { incrementFreePlanSummaryCount } from "@/hooks/utils/usageStatsLimiter";
-import { sendToGPT } from "@/lib/sendToGPT";
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-export async function POST(req: NextRequest) {
-  try {
-    const { sellerId, text, inquiryId, save = true, templateName, summaryType = "basic", tags = [] } = await req.json();
+export async function POST(req: Request) {
+  const body = await req.json();
+  const { sellerId, inquiryId, messages, plan = "free" } = body;
 
-    if (!sellerId || !text || !inquiryId) {
-      return new NextResponse("sellerId, text, inquiryId 누락", { status: 400 });
-    }
+  if (!sellerId || !inquiryId || !Array.isArray(messages)) {
+    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+  }
 
-    const sellerRef = db.collection("sellers").doc(sellerId);
-    const sellerSnap = await sellerRef.get();
-    const sellerData = sellerSnap.data();
-    const plan = sellerData?.plan || "free";
+  // 설정 정보 가져오기
+  const sellerRef = doc(db, "sellers", sellerId);
+  const settingsRef = doc(sellerRef, "settings/chatbot");
+  const settingsSnap = await getDoc(settingsRef);
+  const settings = settingsSnap.exists() ? settingsSnap.data() : {};
 
-    if (text.length > 1000) {
-      return new NextResponse("입력은 최대 1000자까지 가능합니다.", { status: 400 });
-    }
+  const industry = settings.industry || "";
+  const products = settings.products || "";
+  const promptCue = settings.promptCue || "";
+  const welcomeMessage = settings.welcomeMessage || "";
+  const category = settings.category || "상담";
 
-    const summarySnap = await db
-      .collection("summaryLogs")
-      .where("sellerId", "==", sellerId)
-      .where("inquiryId", "==", inquiryId)
-      .limit(1)
-      .get();
-
-    if (!summarySnap.empty) {
-      const cached = summarySnap.docs[0].data();
-      return NextResponse.json({ reply: cached.reply });
-    }
-
-    const settingsRef = sellerRef.collection("settings").doc("chatbot");
-    const settingsSnap = await settingsRef.get();
-    const settings = settingsSnap.data() || {};
-
-    const industry = settings.industry || "";
-    const products = settings.products || "";
-    const promptCue = settings.promptCue || "";
-    const welcomeMessage = settings.welcomeMessage || "";
-    const category = settings.category || "상담";
-
-    if (plan === "free") {
-      const { blocked } = await incrementFreePlanSummaryCount(sellerId);
-      if (blocked) {
-        return new NextResponse(
-          JSON.stringify({ message: "요약 횟수를 초과했습니다. 유료 요금제로 업그레이드 해주세요." }),
-          { status: 403 }
-        );
-      }
-    }
-
-    const systemPrompt = `당신은 고객센터 요약 AI입니다. 
+  const systemPrompt = `당신은 고객센터 요약 AI입니다. 
 판매자의 업종과 판매 품목을 참고하되, 그 외 주제나 과거 정보로 벗어나지 말고 고객의 말과 해당 판매자의 업종/상품 안에서만 집중해서 요약하세요.
 
 업종: ${industry}
@@ -69,67 +49,82 @@ export async function POST(req: NextRequest) {
 - 말머리 제거: "고객은", "요약:" 금지
 - 1~2문장 간결 요약`;
 
-    const reply = await sendToGPT({
-      text,
-      systemPrompt,
+  const summaryMessages = [
+    { role: "system", content: systemPrompt },
+    ...messages,
+    { role: "user", content: "위 대화를 상담자 입장에서 요약해줘. 단답형이 아닌 설명식으로 정리해줘." }
+  ];
+
+  let summary = "";
+  try {
+    const chat = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
-      temperature: 0.3,
+      messages: summaryMessages,
     });
+    summary = chat.choices[0].message.content ?? "요약 실패";
+  } catch (err) {
+    console.error("요약 실패:", err);
+    summary = "요약 실패 (시스템 오류 발생)";
+  }
 
-    if (!reply) {
-      return new NextResponse("요약 생성 실패", { status: 500 });
-    }
+  const createdAt = Timestamp.now();
 
-    if (save) {
-      await db.collection("summaryLogs").add({
-        sellerId,
-        inquiryId,
-        text,
-        reply,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+  const summaryDoc = {
+    sender: "system",
+    text: summary,
+    createdAt,
+    type: "summary",
+    status: "done",
+  };
 
-      await db.collection("chatMessages").add({
-        from: "system",
-        to: sellerId,
-        inquiryId,
-        message: reply,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-    }
+  const logDoc = {
+    sellerId,
+    inquiryId,
+    reply: summary,
+    source: "summary-api",
+    createdAt,
+  };
 
-    const templatesSnap = await db
-      .collection("templates")
-      .where("sellerId", "==", sellerId)
-      .where("category", "==", category)
-      .get();
+  try {
+    await Promise.all([
+      addDoc(collection(db, "sellers", sellerId, "inquiries", inquiryId, "messages"), summaryDoc),
+      addDoc(collection(db, "admin", "chat-logs", "logs"), logDoc),
+    ]);
 
-    for (const doc of templatesSnap.docs) {
-      const t = doc.data();
-      const matched = t.keywords?.some((kw: string) => reply.includes(kw));
+    const templatesSnap = await getDocs(query(
+      collection(db, "templates"),
+      where("sellerId", "==", sellerId),
+      where("category", "==", category)
+    ));
+
+    for (const docSnap of templatesSnap.docs) {
+      const t = docSnap.data();
+      const matched = t.keywords?.some((kw: string) => summary.includes(kw));
       if (matched) {
-        await db.collection("chatMessages").add({
-          from: "system",
-          to: sellerId,
-          inquiryId,
-          message: t.message,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        await addDoc(collection(db, "sellers", sellerId, "inquiries", inquiryId, "messages"), {
+          sender: "system",
+          text: t.message,
+          createdAt: Timestamp.now(),
+          type: "template",
+          status: "done",
         });
         break;
       }
     }
 
-    const compressed = `입력:${text.replace(/\s+/g, "")} 요약:${reply.replace(/\s+/g, "")}`;
-    await db.collection("adminSummaryStore").add({
+    const compressed = `입력:${messages.map(m => m.content).join(" ").replace(/\s+/g, "")}` +
+      ` 요약:${summary.replace(/\s+/g, "")}`;
+    await addDoc(collection(db, "adminSummaryStore"), {
       sellerId,
       inquiryId,
       data: compressed,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt,
     });
 
-    return NextResponse.json({ reply });
-  } catch (err: any) {
-    console.error("GPT 요약 실패:", err);
-    return new NextResponse("GPT 요약 요청 중 오류가 발생했습니다.", { status: 500 });
+  } catch (err) {
+    console.error("Firestore 저장 오류:", err);
+    return NextResponse.json({ error: "저장 실패" }, { status: 500 });
   }
+
+  return NextResponse.json({ summary });
 }
