@@ -4,7 +4,7 @@ import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where, orderBy, limit } from "firebase/firestore";
 
 export default async function Page({ params }: { params: { sellerId: string } }) {
-  const { sellerId } = params;
+  const sellerId = params.sellerId;
 
   const q = query(
     collection(db, "sellers", sellerId, "inquiries"),
