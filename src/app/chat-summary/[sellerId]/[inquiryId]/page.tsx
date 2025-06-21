@@ -1,26 +1,28 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import ChatScreen from "@/components/chat/ChatScreen";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
-export default function ConsumerChatPage({
-  params,
-}: {
-  params: { sellerId: string; inquiryId: string };
-}) {
-  const [openTime, setOpenTime] = useState<string>("");
-  const [closeTime, setCloseTime] = useState<string>("");
+interface PageProps {
+  params: {
+    sellerId: string;
+    inquiryId: string;
+  };
+}
+
+export default function ConsumerChatPage(props: PageProps) {
+  const { sellerId, inquiryId } = props.params;
+  const [openTime, setOpenTime] = useState("");
+  const [closeTime, setCloseTime] = useState("");
 
   useEffect(() => {
-    const ref = doc(db, "sellers", params.sellerId, "settings", "chatbot");
+    const ref = doc(db, "sellers", sellerId, "settings", "chatbot");
     getDoc(ref).then((snap) => {
       const data = snap.data();
       if (data?.openTime) setOpenTime(data.openTime);
       if (data?.closeTime) setCloseTime(data.closeTime);
     });
-  }, [params.sellerId]);
+  }, [sellerId]);
 
   return (
     <>
@@ -28,8 +30,8 @@ export default function ConsumerChatPage({
         상담 가능 시간: {openTime} ~ {closeTime}
       </div>
       <ChatScreen
-        sellerId={params.sellerId}
-        inquiryId={params.inquiryId}
+        sellerId={sellerId}
+        inquiryId={inquiryId}
         userType="consumer"
       />
     </>
