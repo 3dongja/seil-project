@@ -1,6 +1,6 @@
 // src/components/chat/KakaoChatInputBar.tsx
 import { useState, useRef, useEffect } from "react";
-import { addDoc, collection, serverTimestamp, doc, getDoc } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface KakaoChatInputBarProps {
@@ -37,6 +37,14 @@ export default function KakaoChatInputBar({ sellerId, inquiryId, userType, scrol
       sender: userType,
       createdAt: serverTimestamp(),
     });
+
+    // 🔄 실시간 연결을 위해 selectedInquiryId 갱신
+    if (userType === "consumer") {
+      await updateDoc(doc(db, "sellers", sellerId), {
+        selectedInquiryId: inquiryId,
+      });
+    }
+
     setText("");
     scrollToBottom?.();
   };

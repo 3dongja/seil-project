@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { onSnapshot, doc, collectionGroup, getDocs } from "firebase/firestore";
+import { onSnapshot, doc, collection, collectionGroup, getDocs, query, orderBy, limit } from "firebase/firestore";
+
 import { db } from "@/lib/firebase";
 import ChatScreen from "@/components/chat/ChatScreen";
 
@@ -50,6 +51,22 @@ export default function SellerLiveChatWrapper({ uid, inquiryId }: Props) {
       return () => unsubscribe();
     }
   }, [sellerId, selectedInquiryId, inquiryId]);
+
+  // fallback: 가장 최근 채팅으로 진입
+  useEffect(() => {
+    if (!selectedInquiryId && sellerId) {
+      const fetchLatestInquiry = async () => {
+        const snap = await getDocs(
+          query(collection(db, "sellers", sellerId, "inquiries"), orderBy("createdAt", "desc"), limit(1))
+        );
+        if (!snap.empty) {
+          const latest = snap.docs[0];
+          setSelectedInquiryId(latest.id);
+        }
+      };
+      fetchLatestInquiry();
+    }
+  }, [sellerId, selectedInquiryId]);
 
   return (
     <div className="h-screen flex flex-col">
