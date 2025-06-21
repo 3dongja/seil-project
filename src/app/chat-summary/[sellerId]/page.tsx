@@ -2,21 +2,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { db, storage } from "@/lib/firebase";
 import { doc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { v4 as uuid } from "uuid";
 import CategoryForm from "@/components/chat/CategoryForm";
-import type { FC } from "react";
 
-interface PageProps {
-  params: { sellerId: string };
-}
-
-const ChatSummaryPage: FC<PageProps> = ({ params }) => {
+const ChatSummaryPage = () => {
   const router = useRouter();
-  const sellerId = params.sellerId;
+  const { sellerId } = useParams() as { sellerId: string };
 
   const categories = ["주문", "예약", "상담", "문의", "반품", "교환", "기타"];
 
