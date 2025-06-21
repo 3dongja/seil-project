@@ -1,4 +1,3 @@
-// src/app/seller-live-chat/page.tsx
 "use client";
 
 import { useSearchParams } from "next/navigation";
@@ -24,7 +23,6 @@ export default function SellerLiveChatPage() {
       <SellerLiveChatWrapper
         uid={sellerId}
         inquiryId={inquiryId}
-        // userType prop 제거 (정의되지 않은 prop으로 인해 오류 발생)
       />
     </Suspense>
   );
