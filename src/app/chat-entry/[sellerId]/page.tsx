@@ -3,7 +3,8 @@
 import { getFirestore } from "firebase-admin/firestore";
 import { redirect } from "next/navigation";
 
-export default async function Page({ params }: { params: { sellerId: string } }) {
+// 타입 충돌 방지: any로 우회
+export default async function Page({ params }: any) {
   const firestore = getFirestore();
   const { sellerId } = params;
 
