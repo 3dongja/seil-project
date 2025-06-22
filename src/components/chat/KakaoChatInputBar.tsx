@@ -73,7 +73,7 @@ export default function KakaoChatInputBar({ sellerId, inquiryId, userType, scrol
   };
 
   return (
-    <div className="flex flex-col border-t border-gray-300 bg-black">
+    <div className="border-t border-gray-300 bg-black">
       <div className="flex justify-between items-center px-4 py-1 text-sm text-white bg-gray-800">
         <div>
           {sellerOnline ? <span className="text-green-400">● 상담원 접속 중</span> : <span className="text-gray-400">● 상담원 부재중</span>}
@@ -83,7 +83,7 @@ export default function KakaoChatInputBar({ sellerId, inquiryId, userType, scrol
 
       <TemplateResponses templates={templates} onSelect={setText} />
 
-      <div className="flex items-center px-3 py-2">
+      <div className="flex items-center px-3 py-2 bg-black fixed bottom-0 left-0 right-0 z-10">
         <button
           className="text-white px-2"
           onClick={() => fileInputRef.current?.click()}

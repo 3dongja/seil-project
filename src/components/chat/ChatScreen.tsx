@@ -35,7 +35,7 @@ function ChatMessageList(props: ChatMessageListProps) {
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 pb-[80px]">
       {safeMessages.map((msg: any) => {
         if (msg.sender === "system") {
           return (
@@ -130,7 +130,7 @@ export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm =
       <CategoryForm category={resolvedCategory} onChange={setAnswers} onValidate={setValid} />
       <ChatMessageList messages={filteredMessages} userType={userType} sellerId={sellerId} inquiryId={inquiryId} />
       <KakaoChatInputBar sellerId={sellerId} inquiryId={inquiryId} userType={userType} />
-      <div ref={scrollRef}></div>
+      <div ref={scrollRef} className="h-1"></div>
     </div>
   );
 }

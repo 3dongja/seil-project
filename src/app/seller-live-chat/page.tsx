@@ -14,6 +14,7 @@ import {
   doc,
   where
 } from "firebase/firestore";
+import ChatScreen from "@/components/chat/ChatScreen";
 
 interface Inquiry {
   id: string;
@@ -31,6 +32,10 @@ export default function SellerLiveChatWrapper() {
   const [sellerId, setSellerId] = useState<string>("");
   const [search, setSearch] = useState<string>("");
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const selectedInquiryId = searchParams.get("inquiry");
+  const selectedSellerId = searchParams.get("seller");
 
   useEffect(() => {
     const uid = localStorage.getItem("uid");
@@ -145,6 +150,16 @@ export default function SellerLiveChatWrapper() {
           </div>
         ))}
       </div>
+
+      {selectedSellerId && selectedInquiryId && (
+        <div className="fixed inset-0 z-50 bg-white border-l">
+          <ChatScreen
+            sellerId={selectedSellerId}
+            inquiryId={selectedInquiryId}
+            userType="seller"
+          />
+        </div>
+      )}
     </main>
   );
 }
