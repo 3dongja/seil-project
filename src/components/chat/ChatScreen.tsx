@@ -24,6 +24,14 @@ function ChatMessageList({ messages = [], userType, sellerId, inquiryId }: any) 
     });
   };
 
+  if (messages.length === 0) {
+    return (
+      <div className="text-center text-gray-400 py-10">
+        아직 메시지가 없습니다.
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2">
       {messages.map((msg: any) => (
@@ -64,9 +72,13 @@ interface ChatScreenProps {
   searchTerm?: string;
   sortOrder?: "asc" | "desc";
   category?: string;
+  summaryInfo?: {
+    name?: string;
+    phone?: string;
+  };
 }
 
-export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm = "", sortOrder = "asc", category }: ChatScreenProps) {
+export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm = "", sortOrder = "asc", category, summaryInfo }: ChatScreenProps) {
   const [messages, setMessages] = useState<any[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [valid, setValid] = useState(false);
@@ -113,6 +125,24 @@ export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm =
 
   return (
     <div className="h-full flex flex-col">
+      {summaryInfo?.name || summaryInfo?.phone ? (
+        <div className="px-4 py-2 bg-gray-100 border-b text-sm text-gray-800">
+          {summaryInfo.name && <div>이름: {summaryInfo.name}</div>}
+          {summaryInfo.phone && (
+            <div
+              className="cursor-pointer text-blue-600 underline"
+              onClick={() => {
+                if (summaryInfo.phone) {
+                  navigator.clipboard.writeText(summaryInfo.phone);
+                  alert("전화번호가 복사되었습니다.");
+                }
+              }}
+            >
+              전화번호: {summaryInfo.phone}
+            </div>
+          )}
+        </div>
+      ) : null}
       <div className="p-4">
         <CategoryForm category={resolvedCategory} onChange={setAnswers} onValidate={setValid} />
       </div>

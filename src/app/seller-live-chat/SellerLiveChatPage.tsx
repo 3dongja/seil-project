@@ -1,4 +1,4 @@
-// SellerLiveChatPage.tsx 개선된 채팅 리스트 UI + 상담 가능 시간 동적 처리
+// SellerLiveChatPage.tsx 개선된 채팅 리스트 UI + 상담 가능 시간 동적 처리 + 고객 정보 상단 표시
 "use client";
 
 import { useEffect, useState } from "react";
@@ -134,6 +134,8 @@ export default function SellerLiveChatWrapper() {
     return now < open || now >= close;
   })();
 
+  const selected = filtered.find((i) => i.id === selectedInquiryId);
+
   return (
     <main className="h-screen bg-gray-50 flex flex-col">
       <div className="p-4 border-b">
@@ -186,6 +188,16 @@ export default function SellerLiveChatWrapper() {
               ● 상담원 부재중 (상담 가능 시간: {openTime} ~ {closeTime})
             </div>
           )}
+
+          {/* 👤 고객 이름 및 전화번호 표시 */}
+          {selected && (
+            <div className="sticky top-6 z-10 bg-white px-4 py-2 border-b">
+              <div className="text-base font-semibold text-gray-900 truncate">
+                {selected.name} / {selected.phone}
+              </div>
+            </div>
+          )}
+
           <div className="flex-1 overflow-hidden">
             <SellerChatScreenWrapper
               sellerId={selectedSellerId}

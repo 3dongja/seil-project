@@ -31,9 +31,9 @@ export default function Page() {
   }, [sellerId]);
 
   return (
-    <>
+    <main className="min-h-screen bg-white text-gray-900">
       <div className="text-sm text-center text-gray-600 py-2">
-        상담 가능 시간: {openTime} ~ {closeTime}
+        🕒 상담 가능 시간: {openTime} ~ {closeTime}
       </div>
       <ChatScreen
         sellerId={sellerId}
@@ -41,6 +41,6 @@ export default function Page() {
         userType="consumer"
         category={category}
       />
-    </>
+    </main>
   );
 }
