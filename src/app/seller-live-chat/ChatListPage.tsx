@@ -1,4 +1,3 @@
-// ChatListPage.tsx - 채팅 목록 전용 분리
 "use client";
 
 import { useEffect, useState, useRef } from "react";
@@ -160,13 +159,13 @@ export default function ChatListPage({ sellerId }: ChatListPageProps) {
           >
             <div
               id={`slide-${inq.id}`}
-              className="flex transform transition-transform duration-500 ease-in-out"
+              className="flex transform transition-transform duration-500 ease-in-out translate-x-0"
               onTouchStart={(e) => handleTouchStart(inq.id, e.touches[0].clientX)}
               onTouchEnd={(e) => handleTouchEnd(inq.id, e.changedTouches[0].clientX)}
             >
               <div
                 className="flex-1 px-4 py-3 cursor-pointer"
-                onClick={() => router.push(`/seller-live-chat?seller=${sellerId}&inquiry=${inq.id}`)}
+                onClick={() => router.push(`/seller-live-chat/view?seller=${sellerId}&inquiry=${inq.id}`)}
               >
                 <div className="flex justify-between items-center">
                   <div className="truncate text-base font-semibold text-gray-900 max-w-[70%]">
@@ -195,7 +194,7 @@ export default function ChatListPage({ sellerId }: ChatListPageProps) {
 
               <button
                 onClick={() => handleDelete(inq.id)}
-                className="w-20 bg-red-500 text-white text-sm flex justify-center items-center"
+                className="absolute right-0 top-0 bottom-0 w-20 bg-red-500 text-white text-sm flex justify-center items-center"
               >
                 삭제
               </button>
