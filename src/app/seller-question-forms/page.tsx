@@ -1,27 +1,54 @@
-// src/app/seller-question-forms/page.tsx
+// seller-question-forms/page.tsx (기본값 자동 세팅 추가 + placeholder 지원)
 
 "use client";
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { FormEvent } from "react";
 import Link from "next/link";
+import useUserRoles from "@/hooks/useUserRoles";
+import { defaultForms } from "@/constants/defaultForms";
 
 export default function SellerQuestionFormsPage() {
   const [selectedCategory, setSelectedCategory] = useState("문의");
   const [questions, setQuestions] = useState([
-    { key: "name", label: "이름", required: true },
-    { key: "phone", label: "연락처", required: true },
+    { key: "name", label: "이름", required: true, placeholder: "이름을 입력하세요" },
+    { key: "phone", label: "연락처", required: true, placeholder: "010-0000-0000" },
   ]);
   const [templates, setTemplates] = useState(["", "", "", "", ""]);
+  const { user, isSeller, loading } = useUserRoles();
   const router = useRouter();
 
   useEffect(() => {
-    const load = async () => {
-      const ref = doc(db, "questionForms", selectedCategory);
-      const snap = await getDoc(ref);
+    if (!user?.uid) return;
+    const uid = user.uid as string;
+
+    async function initializeDefaults() {
+      const settingsRef = doc(db, "sellers", uid, "settings", "chatbot");
+      const settingsSnap = await getDoc(settingsRef);
+      const isCustom = settingsSnap.exists() && settingsSnap.data().isCustomConfigured;
+
+      if (!isCustom) {
+        await Promise.all(
+          Object.entries(defaultForms).map(([category, data]) => {
+            const ref = doc(db, "sellers", uid, "questionForms", category);
+            return setDoc(ref, data);
+          })
+        );
+        await setDoc(settingsRef, { isCustomConfigured: false }, { merge: true });
+      }
+    }
+
+    initializeDefaults();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    const uid = user.uid as string;
+    const ref = doc(db, "sellers", uid, "questionForms", selectedCategory);
+    getDoc(ref).then((snap) => {
       if (snap.exists()) {
         const data = snap.data();
         setQuestions(data.questions || []);
@@ -30,18 +57,23 @@ export default function SellerQuestionFormsPage() {
         setQuestions([]);
         setTemplates(["", "", "", "", ""]);
       }
-    };
-    load();
-  }, [selectedCategory]);
+    });
+  }, [selectedCategory, user]);
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
-    await setDoc(doc(db, "questionForms", selectedCategory), {
+    if (!user?.uid) return;
+    const uid = user.uid as string;
+    const ref = doc(db, "sellers", uid, "questionForms", selectedCategory);
+    await setDoc(ref, {
       questions,
       templates,
     });
+    await setDoc(doc(db, "sellers", uid, "settings", "chatbot"), { isCustomConfigured: true }, { merge: true });
     alert("저장되었습니다");
   };
+
+  if (loading) return <div className="p-4">로딩 중...</div>;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 px-4 py-8">
@@ -52,11 +84,9 @@ export default function SellerQuestionFormsPage() {
         value={selectedCategory}
         onChange={(e) => setSelectedCategory(e.target.value)}
       >
-        <option value="문의">문의</option>
-        <option value="예약">예약</option>
-        <option value="반품">반품</option>
-        <option value="배송">배송</option>
-        <option value="기타">기타</option>
+        {Object.keys(defaultForms).map((cat) => (
+          <option key={cat} value={cat}>{cat}</option>
+        ))}
       </select>
 
       <form onSubmit={save} className="space-y-4">
@@ -76,7 +106,7 @@ export default function SellerQuestionFormsPage() {
               />
               <input
                 className="border p-1 rounded w-1/2"
-                placeholder="label"
+                placeholder={q.placeholder || "질문 라벨"}
                 value={q.label}
                 onChange={(e) => {
                   const copy = [...questions];
@@ -101,7 +131,7 @@ export default function SellerQuestionFormsPage() {
           <button
             type="button"
             className="text-blue-600 text-sm"
-            onClick={() => setQuestions([...questions, { key: "", label: "", required: false }])}
+            onClick={() => setQuestions([...questions, { key: "", label: "", required: false, placeholder: "" }])}
           >
             + 항목 추가
           </button>
