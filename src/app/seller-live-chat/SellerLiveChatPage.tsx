@@ -12,8 +12,7 @@ import {
   getDocs,
   limit,
   deleteDoc,
-  doc,
-  where
+  doc
 } from "firebase/firestore";
 import ChatScreen from "@/components/chat/ChatScreen";
 
@@ -26,6 +25,7 @@ interface Inquiry {
   unread?: boolean;
   pinned?: boolean;
   read?: boolean;
+  category?: string;
 }
 
 export default function SellerLiveChatWrapper() {
@@ -37,6 +37,10 @@ export default function SellerLiveChatWrapper() {
 
   const selectedInquiryId = searchParams.get("inquiry");
   const selectedSellerId = searchParams.get("seller");
+
+  const now = new Date();
+  const currentHour = now.getHours();
+  const isOutOfHours = currentHour < 11 || currentHour >= 15;
 
   useEffect(() => {
     const uid = localStorage.getItem("uid");
@@ -65,6 +69,7 @@ export default function SellerLiveChatWrapper() {
           const unread = data.alert === true;
           const read = data.alert === false;
           const pinned = data.pinned === true;
+          const category = data.category || "일반";
           return {
             id,
             name: data.name,
@@ -73,7 +78,8 @@ export default function SellerLiveChatWrapper() {
             lastMessage,
             unread,
             read,
-            pinned
+            pinned,
+            category
           };
         })
       );
@@ -139,6 +145,7 @@ export default function SellerLiveChatWrapper() {
               <div className="flex justify-between">
                 <div className="font-semibold flex gap-1 items-center">
                   {inq.name} / {inq.phone}
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 rounded-full ml-2">{inq.category}</span>
                   {inq.unread && <span className="text-xs bg-red-500 text-white px-1.5 rounded-full">N</span>}
                   {inq.read && <span className="text-xs text-gray-400">✓</span>}
                 </div>
@@ -153,12 +160,17 @@ export default function SellerLiveChatWrapper() {
       </div>
 
       {selectedSellerId && selectedInquiryId && (
-        <div className="fixed inset-0 z-50 bg-white border-l">
-          <ChatScreen
-            sellerId={selectedSellerId}
-            inquiryId={selectedInquiryId}
-            userType="seller"
-          />
+        <div className="fixed inset-0 z-50 bg-white border-l flex flex-col animate-slide-in">
+          {isOutOfHours && (
+            <div className="text-sm text-white bg-gray-800 py-1 px-2">● 상담원 부재중 (상담 가능 시간: 11:00 ~ 15:00)</div>
+          )}
+          <div className="flex-1 overflow-hidden">
+            <ChatScreen
+              sellerId={selectedSellerId}
+              inquiryId={selectedInquiryId}
+              userType="seller"
+            />
+          </div>
         </div>
       )}
     </main>
