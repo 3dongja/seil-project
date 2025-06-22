@@ -38,7 +38,6 @@ export default function ChatListPage({ sellerId }: ChatListPageProps) {
   const [search, setSearch] = useState<string>("");
   const [openTime, setOpenTime] = useState("11:00");
   const [closeTime, setCloseTime] = useState("15:00");
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const router = useRouter();
   const swipeRefs = useRef<Record<string, number>>({});
 
@@ -103,22 +102,6 @@ export default function ChatListPage({ sellerId }: ChatListPageProps) {
     }
   };
 
-  const handleBulkDelete = async () => {
-    if (!confirm("선택한 채팅을 모두 삭제할까요?")) return;
-    try {
-      await Promise.all(selectedIds.map(id => deleteDoc(doc(db, "sellers", sellerId, "inquiries", id))));
-      setSelectedIds([]);
-    } catch (e) {
-      alert("일괄 삭제 중 오류 발생");
-    }
-  };
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  };
-
   const handleTogglePin = async (id: string, current: boolean) => {
     try {
       await updateDoc(doc(db, "sellers", sellerId, "inquiries", id), {
@@ -181,15 +164,6 @@ export default function ChatListPage({ sellerId }: ChatListPageProps) {
               onTouchStart={(e) => handleTouchStart(inq.id, e.touches[0].clientX)}
               onTouchEnd={(e) => handleTouchEnd(inq.id, e.changedTouches[0].clientX)}
             >
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(inq.id)}
-                  onChange={() => toggleSelect(inq.id)}
-                  className="mx-2"
-                />
-              </div>
-
               <div
                 className="flex-1 px-4 py-3 cursor-pointer"
                 onClick={() => router.push(`/seller-live-chat?seller=${sellerId}&inquiry=${inq.id}`)}
@@ -229,17 +203,6 @@ export default function ChatListPage({ sellerId }: ChatListPageProps) {
           </div>
         ))}
       </div>
-
-      {selectedIds.length > 0 && (
-        <div className="p-4 border-t bg-white">
-          <button
-            onClick={handleBulkDelete}
-            className="w-full py-2 bg-red-600 text-white rounded"
-          >
-            선택 항목 삭제 ({selectedIds.length})
-          </button>
-        </div>
-      )}
     </main>
   );
 }

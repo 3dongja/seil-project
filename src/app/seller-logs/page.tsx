@@ -30,7 +30,6 @@ interface Inquiry {
 export default function SellerLogsPage() {
   const { user, isSeller, loading } = useUserRoles();
   const [logs, setLogs] = useState<Inquiry[]>([]);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -64,33 +63,6 @@ export default function SellerLogsPage() {
     }
   };
 
-  const handleBulkDelete = async () => {
-    if (!confirm("선택한 항목을 삭제하시겠습니까?")) return;
-    try {
-      await Promise.all(
-        logs
-          .filter((log) => selectedIds.includes(log.id))
-          .map(async (log) => {
-            const refDoc = doc(db, "sellers", user!.uid, "inquiries", log.id);
-            await deleteDoc(refDoc);
-            if (log.fileUrl && log.fileName) {
-              const storageRef = ref(storage, `sellers/${user!.uid}/inquiries/${log.id}/${log.fileName}`);
-              await deleteObject(storageRef);
-            }
-          })
-      );
-      setSelectedIds([]);
-    } catch (e) {
-      alert("일괄 삭제 중 오류가 발생했습니다.");
-    }
-  };
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  };
-
   const formatTime = (ts: any) => {
     if (!ts?.seconds) return "";
     const date = new Date(ts.seconds * 1000);
@@ -113,15 +85,6 @@ export default function SellerLogsPage() {
             className="relative rounded-xl shadow-md bg-white hover:bg-gray-50 overflow-hidden"
           >
             <div className="flex items-start p-4 cursor-pointer" onClick={() => router.push(`/seller-live-chat/view?seller=${user!.uid}&inquiry=${log.id}`)}>
-              <input
-                type="checkbox"
-                checked={selectedIds.includes(log.id)}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  toggleSelect(log.id);
-                }}
-                className="mr-3 mt-1"
-              />
               <div className="flex-1">
                 <div className="flex justify-between items-center">
                   <p className="text-sm text-gray-500">{formatTime(log.createdAt)}</p>
@@ -158,17 +121,6 @@ export default function SellerLogsPage() {
           </div>
         ))}
       </div>
-
-      {selectedIds.length > 0 && (
-        <div className="p-4 border-t bg-white">
-          <button
-            onClick={handleBulkDelete}
-            className="w-full py-2 bg-red-600 text-white rounded"
-          >
-            선택 항목 삭제 ({selectedIds.length})
-          </button>
-        </div>
-      )}
     </main>
   );
 }
