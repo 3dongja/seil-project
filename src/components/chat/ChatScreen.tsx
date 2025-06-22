@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase";
 import KakaoChatInputBar from "./KakaoChatInputBar";
 import CategoryForm from "./CategoryForm";
 import { getSummaryFromAnswers } from "@/lib/summary";
-import { useSearchParams } from "next/navigation"; // ✅ 추가
+import { useSearchParams } from "next/navigation";
 
 function formatTime(timestamp: any) {
   if (!timestamp) return "";
@@ -15,17 +15,7 @@ function formatTime(timestamp: any) {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-interface ChatMessageListProps {
-  messages?: any[];
-  userType: "seller" | "consumer";
-  sellerId: string;
-  inquiryId: string;
-}
-
-function ChatMessageList(props: ChatMessageListProps) {
-  const { messages, userType, sellerId, inquiryId } = props;
-  const safeMessages = messages ?? [];
-
+function ChatMessageList({ messages = [], userType, sellerId, inquiryId }: any) {
   const handleDelete = async (msgId: string) => {
     const ok = confirm("메시지를 삭제하시겠습니까?");
     if (!ok) return;
@@ -35,17 +25,13 @@ function ChatMessageList(props: ChatMessageListProps) {
   };
 
   return (
-    <div className="space-y-2 pb-[80px]">
-      {safeMessages.map((msg: any) => {
-        if (msg.sender === "system") {
-          return (
-            <div key={msg.id} className="text-center text-xs italic text-gray-500 py-2">
-              {msg.deleted ? "삭제된 메시지입니다." : msg.text}
-            </div>
-          );
-        }
-
-        return (
+    <div className="space-y-2">
+      {messages.map((msg: any) => (
+        msg.sender === "system" ? (
+          <div key={msg.id} className="text-center text-xs italic text-gray-500 py-2">
+            {msg.deleted ? "삭제된 메시지입니다." : msg.text}
+          </div>
+        ) : (
           <div
             key={msg.id}
             className={`flex flex-col ${msg.sender === userType ? "items-end" : "items-start"}`}
@@ -65,8 +51,8 @@ function ChatMessageList(props: ChatMessageListProps) {
               {formatTime(msg.createdAt)}
             </div>
           </div>
-        );
-      })}
+        )
+      ))}
     </div>
   );
 }
@@ -126,11 +112,17 @@ export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm =
   }, [answers, valid]);
 
   return (
-    <div className="p-4 space-y-4">
-      <CategoryForm category={resolvedCategory} onChange={setAnswers} onValidate={setValid} />
-      <ChatMessageList messages={filteredMessages} userType={userType} sellerId={sellerId} inquiryId={inquiryId} />
-      <KakaoChatInputBar sellerId={sellerId} inquiryId={inquiryId} userType={userType} />
-      <div ref={scrollRef} className="h-1"></div>
+    <div className="h-full flex flex-col">
+      <div className="p-4">
+        <CategoryForm category={resolvedCategory} onChange={setAnswers} onValidate={setValid} />
+      </div>
+      <div className="flex-1 overflow-auto px-4 space-y-4 pb-32">
+        <ChatMessageList messages={filteredMessages} userType={userType} sellerId={sellerId} inquiryId={inquiryId} />
+        <div ref={scrollRef} className="h-1"></div>
+      </div>
+      <div className="fixed bottom-0 left-0 w-full z-20 bg-white border-t">
+        <KakaoChatInputBar sellerId={sellerId} inquiryId={inquiryId} userType={userType} />
+      </div>
     </div>
   );
 }

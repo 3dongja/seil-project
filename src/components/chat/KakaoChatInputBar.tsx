@@ -73,19 +73,23 @@ export default function KakaoChatInputBar({ sellerId, inquiryId, userType, scrol
   };
 
   return (
-    <div className="border-t border-gray-300 bg-black">
-      <div className="flex justify-between items-center px-4 py-1 text-sm text-white bg-gray-800">
+    <div className="bg-white border-t border-gray-300">
+      <div className="flex justify-between items-center px-4 py-1 text-sm text-gray-700 bg-gray-100 sticky top-0 z-10">
         <div>
-          {sellerOnline ? <span className="text-green-400">● 상담원 접속 중</span> : <span className="text-gray-400">● 상담원 부재중</span>}
+          {sellerOnline ? (
+            <span className="text-green-500">● 상담원 접속 중</span>
+          ) : (
+            <span className="text-gray-400">● 상담원 부재중</span>
+          )}
         </div>
         {chatHours && <div className="text-gray-400">상담 가능 시간: {chatHours}</div>}
       </div>
 
       <TemplateResponses templates={templates} onSelect={setText} />
 
-      <div className="flex items-center px-3 py-2 bg-black fixed bottom-0 left-0 right-0 z-10">
+      <div className="flex items-center px-3 py-2 bg-white">
         <button
-          className="text-white px-2"
+          className="text-gray-700 px-2"
           onClick={() => fileInputRef.current?.click()}
         >
           📎
@@ -98,13 +102,13 @@ export default function KakaoChatInputBar({ sellerId, inquiryId, userType, scrol
         />
         <input
           type="text"
-          className="flex-1 px-3 py-2 text-white bg-transparent placeholder-gray-400 focus:outline-none"
+          className="flex-1 px-3 py-2 border rounded-full text-gray-800 placeholder-gray-400 focus:outline-none"
           placeholder="메시지를 입력하세요..."
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
         />
-        <button onClick={handleSend} className="text-white px-2">
+        <button onClick={handleSend} className="text-gray-700 px-2">
           📤
         </button>
       </div>

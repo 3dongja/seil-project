@@ -14,7 +14,7 @@ import {
   deleteDoc,
   doc
 } from "firebase/firestore";
-import ChatScreen from "@/components/chat/ChatScreen";
+import ChatScreenWrapper from "@/components/chat/ChatScreenWrapper";
 
 interface Inquiry {
   id: string;
@@ -162,13 +162,14 @@ export default function SellerLiveChatWrapper() {
       {selectedSellerId && selectedInquiryId && (
         <div className="fixed inset-0 z-50 bg-white border-l flex flex-col animate-slide-in">
           {isOutOfHours && (
-            <div className="text-sm text-white bg-gray-800 py-1 px-2">● 상담원 부재중 (상담 가능 시간: 11:00 ~ 15:00)</div>
+            <div className="sticky top-0 z-10 text-sm text-white bg-gray-800 py-1 px-2">
+              ● 상담원 부재중 (상담 가능 시간: 11:00 ~ 15:00)
+            </div>
           )}
           <div className="flex-1 overflow-hidden">
-            <ChatScreen
+            <ChatScreenWrapper
               sellerId={selectedSellerId}
               inquiryId={selectedInquiryId}
-              userType="seller"
             />
           </div>
         </div>
@@ -176,3 +177,4 @@ export default function SellerLiveChatWrapper() {
     </main>
   );
 }
+
