@@ -34,6 +34,7 @@ const groupedMenu = [
     title: "⚙️ 환경 설정 (기능 조정)",
     items: [
       { label: "⚙️ 챗봇 응답 설정", path: "/seller-settings" },
+      { label: "📝 질문 템플릿 설정", path: "/seller-question-forms" },
     ]
   },
   {

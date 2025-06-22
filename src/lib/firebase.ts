@@ -4,6 +4,7 @@ import { getAuth } from "firebase/auth"
 import { getFirestore } from "firebase/firestore"
 import { getDatabase } from "firebase/database"
 import { getStorage } from "firebase/storage"
+import { getFunctions } from "firebase/functions" // ✅ 추가
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,7 +13,7 @@ const firebaseConfig = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DB_URL, // ✅ 여기를 수정
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DB_URL,
 }
 
 // 중복 초기화 방지
@@ -22,5 +23,6 @@ const auth = getAuth(app)
 const db = getFirestore(app)
 const rtdb = getDatabase(app)
 const storage = getStorage(app)
+const functions = getFunctions(app) // ✅ 추가
 
-export { app, auth, db, rtdb, storage }
+export { app, auth, db, rtdb, storage, functions } // ✅ functions 포함

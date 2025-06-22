@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { addDoc, collection, serverTimestamp, doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import TemplateResponses from "@/components/TemplateResponses";
 
 interface KakaoChatInputBarProps {
   sellerId: string;
@@ -15,6 +16,7 @@ export default function KakaoChatInputBar({ sellerId, inquiryId, userType, scrol
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [sellerOnline, setSellerOnline] = useState(false);
   const [chatHours, setChatHours] = useState<string>("");
+  const [templates, setTemplates] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchSellerStatus = async () => {
@@ -27,7 +29,16 @@ export default function KakaoChatInputBar({ sellerId, inquiryId, userType, scrol
       }
     };
 
+    const fetchTemplates = async () => {
+      const snap = await getDoc(doc(db, "sellers", sellerId, "settings", "chatbot"));
+      if (snap.exists()) {
+        const data = snap.data();
+        setTemplates(data?.customTemplates ?? []);
+      }
+    };
+
     fetchSellerStatus();
+    fetchTemplates();
   }, [sellerId]);
 
   const handleSend = async () => {
@@ -38,7 +49,6 @@ export default function KakaoChatInputBar({ sellerId, inquiryId, userType, scrol
       createdAt: serverTimestamp(),
     });
 
-    // 🔄 실시간 연결을 위해 selectedInquiryId 갱신
     if (userType === "consumer") {
       await updateDoc(doc(db, "sellers", sellerId), {
         selectedInquiryId: inquiryId,
@@ -59,7 +69,6 @@ export default function KakaoChatInputBar({ sellerId, inquiryId, userType, scrol
       return;
     }
 
-    // TODO: Firebase Storage 업로드 구현 필요
     console.log("업로드할 파일:", file.name);
   };
 
@@ -71,6 +80,8 @@ export default function KakaoChatInputBar({ sellerId, inquiryId, userType, scrol
         </div>
         {chatHours && <div className="text-gray-400">상담 가능 시간: {chatHours}</div>}
       </div>
+
+      <TemplateResponses templates={templates} onSelect={setText} />
 
       <div className="flex items-center px-3 py-2">
         <button
@@ -93,11 +104,8 @@ export default function KakaoChatInputBar({ sellerId, inquiryId, userType, scrol
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
         />
-        <button
-          onClick={handleSend}
-          className="text-white font-semibold px-3 py-2"
-        >
-          전송
+        <button onClick={handleSend} className="text-white px-2">
+          📤
         </button>
       </div>
     </div>

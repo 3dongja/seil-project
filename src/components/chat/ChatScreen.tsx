@@ -2,9 +2,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, addDoc } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import KakaoChatInputBar from "./KakaoChatInputBar";
+import CategoryForm from "./CategoryForm";
+import { getSummaryFromAnswers } from "@/lib/summary";
 
 function formatTime(timestamp: any) {
   if (!timestamp) return "";
@@ -74,106 +76,58 @@ interface ChatScreenProps {
   userType: "seller" | "consumer";
   searchTerm?: string;
   sortOrder?: "asc" | "desc";
+  category: string;
 }
 
-export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm = "", sortOrder = "asc" }: ChatScreenProps) {
+export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm = "", sortOrder = "asc", category }: ChatScreenProps) {
   const [messages, setMessages] = useState<any[]>([]);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [valid, setValid] = useState(false);
+  const [lastSummaryInput, setLastSummaryInput] = useState<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const q = query(
       collection(db, "sellers", sellerId, "inquiries", inquiryId, "messages"),
-      orderBy("createdAt", "asc")
+      orderBy("createdAt", sortOrder)
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setMessages(data);
+      scrollRef.current?.scrollIntoView({ behavior: "smooth" });
     });
     return () => unsubscribe();
-  }, [sellerId, inquiryId]);
+  }, [sellerId, inquiryId, sortOrder]);
+
+  const filteredMessages = messages.filter((m) => m.text?.toLowerCase().includes(searchTerm.toLowerCase()));
 
   useEffect(() => {
-    if (userType === "seller") {
-      const ref = doc(db, "sellers", sellerId, "inquiries", inquiryId);
-      updateDoc(ref, { alert: false });
-    }
-  }, [sellerId, inquiryId, userType]);
+    if (!valid || Object.keys(answers).length === 0) return;
+    const inputText = JSON.stringify(answers);
+    if (inputText === lastSummaryInput) return;
 
-  useEffect(() => {
-    if (userType !== "seller" || messages.length < 1) return;
-
-    const last = messages[messages.length - 1];
-    const hasSummary = messages.some((m) => m.sender === "system" || m.sender === "gpt");
-
-    if (last.sender === "consumer" && !hasSummary) {
-      fetch("/api/summary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sellerId,
-          inquiryId,
-          messages: messages.filter((m) => m.text && !m.deleted).map((m) => ({ role: m.sender, content: m.text }))
-        }),
-      })
-        .then((res) => res.json())
-        .then(async (data) => {
-          const summary = data.summary ?? "요약을 생성할 수 없습니다.";
-
-          await Promise.all([
-            addDoc(collection(db, "sellers", sellerId, "inquiries", inquiryId, "messages"), {
-              sender: "system",
-              text: summary,
-              createdAt: new Date(),
-            }),
-            addDoc(collection(db, "admin", "chat-logs", "logs"), {
-              sellerId,
-              inquiryId,
-              reply: summary,
-              source: "auto-summary",
-              createdAt: new Date(),
-            })
-          ]);
-        })
-        .catch((err) => console.error("요약 실패:", err));
-    }
-  }, [messages, sellerId, inquiryId, userType]);
-
-  const filteredMessages = messages
-    .filter((msg) => msg.text.toLowerCase().includes(searchTerm.toLowerCase()))
-    .sort((a, b) => {
-      const aTime = a.createdAt?.seconds || 0;
-      const bTime = b.createdAt?.seconds || 0;
-      return sortOrder === "asc" ? aTime - bTime : bTime - aTime;
-    });
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [filteredMessages]);
+    const fetchSummary = async () => {
+      const settingsRef = doc(db, "sellers", sellerId, "settings", "chatbot");
+      const settingsSnap = await getDoc(settingsRef);
+      const systemPrompt = settingsSnap.exists() ? settingsSnap.data() : {};
+      const summary = await getSummaryFromAnswers(sellerId, category, answers, systemPrompt);
+      await setDoc(doc(db, "sellers", sellerId, "inquiries", inquiryId, "summary", "auto"), {
+        category,
+        answers,
+        summary,
+        updatedAt: new Date()
+      });
+      setLastSummaryInput(inputText);
+    };
+    fetchSummary();
+  }, [answers, valid]);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <div className="flex-1 overflow-y-auto px-2 py-4" ref={scrollRef}>
-        <ChatMessageList
-          userType={userType}
-          sellerId={sellerId}
-          inquiryId={inquiryId}
-          messages={filteredMessages}
-        />
-      </div>
-      <div className="sticky bottom-0 left-0 right-0 bg-white border-t z-10">
-        <KakaoChatInputBar
-          sellerId={sellerId}
-          inquiryId={inquiryId}
-          userType={userType}
-          scrollToBottom={() => {
-            if (scrollRef.current) {
-              scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-            }
-          }}
-        />
-      </div>
+    <div className="p-4 space-y-4">
+      <CategoryForm category={category} onChange={setAnswers} onValidate={setValid} />
+      <ChatMessageList messages={filteredMessages} userType={userType} sellerId={sellerId} inquiryId={inquiryId} />
+      <KakaoChatInputBar sellerId={sellerId} inquiryId={inquiryId} userType={userType} />
+      <div ref={scrollRef}></div>
     </div>
   );
 }

@@ -93,43 +93,20 @@ export default function SellerSettingsPage() {
 
         <label className="font-medium">2️⃣ 업종</label>
         <p className="text-sm text-gray-500">예: 과일 유통, 뷰티샵, 택배, 반찬가게 등</p>
-        <input
-          className="w-full p-2 border rounded"
-          placeholder="예: 과일 유통"
-          value={form.industry}
-          onChange={(e) => updateField("industry", e.target.value)}
-        />
+        <input className="w-full p-2 border rounded" placeholder="예: 과일 유통" value={form.industry} onChange={(e) => updateField("industry", e.target.value)} />
 
         <label className="font-medium">3️⃣ 주요 판매상품</label>
         <p className="text-sm text-gray-500">예: 수박, 고구마, 멜론</p>
-        <input
-          className="w-full p-2 border rounded"
-          placeholder="예: 수박, 고구마"
-          value={form.products}
-          onChange={(e) => updateField("products", e.target.value)}
-        />
+        <input className="w-full p-2 border rounded" placeholder="예: 수박, 고구마" value={form.products} onChange={(e) => updateField("products", e.target.value)} />
 
         <label className="font-medium">4️⃣ 고객에게 보여줄 안내 멘트 (20자 이내)</label>
         <p className="text-sm text-gray-500">상담 시작 시 보여줄 친절한 문장</p>
-        <textarea
-          className="w-full p-2 border rounded"
-          placeholder="예: 안녕하세요! 문의주세요."
-          rows={2}
-          maxLength={20}
-          value={form.welcomeMessage}
-          onChange={(e) => updateField("welcomeMessage", e.target.value)}
-        />
+        <textarea className="w-full p-2 border rounded" placeholder="예: 안녕하세요! 문의주세요." rows={2} maxLength={20} value={form.welcomeMessage} onChange={(e) => updateField("welcomeMessage", e.target.value)} />
         <p className="text-right text-xs text-gray-400">{form.welcomeMessage.length}/20자</p>
 
         <label className="font-medium">5️⃣ 고객 질문을 유도할 문장 (50자 이내)</label>
         <p className="text-sm text-gray-500">예: 어떤 상품을 반품 원하시나요?</p>
-        <input
-          className="w-full p-2 border rounded"
-          placeholder="예: 어떤 상품을 반품 원하시나요?"
-          maxLength={50}
-          value={form.promptCue}
-          onChange={(e) => updateField("promptCue", e.target.value)}
-        />
+        <input className="w-full p-2 border rounded" placeholder="예: 어떤 상품을 반품 원하시나요?" maxLength={50} value={form.promptCue} onChange={(e) => updateField("promptCue", e.target.value)} />
         <p className="text-right text-xs text-gray-400">{form.promptCue.length}/50자</p>
 
         <div className="bg-gray-50 p-3 border rounded text-sm">
@@ -138,10 +115,7 @@ export default function SellerSettingsPage() {
           <div className="whitespace-pre-wrap text-gray-700">{preview}</div>
         </div>
 
-        <button
-          onClick={handleSave}
-          className="w-full py-3 bg-blue-600 text-white rounded font-bold"
-        >
+        <button onClick={handleSave} className="w-full py-3 bg-blue-600 text-white rounded font-bold">
           저장하기
         </button>
       </div>
