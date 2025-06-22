@@ -1,212 +1,26 @@
-// SellerLiveChatPage.tsx 개선된 채팅 리스트 UI + 상담 가능 시간 동적 처리 + 고객 정보 상단 표시
+// SellerLiveChatPage.tsx - 채팅방 전용 화면 (채팅 UI만 보여줌)
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { db } from "@/lib/firebase";
-import {
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-  getDocs,
-  limit,
-  deleteDoc,
-  doc,
-  getDoc
-} from "firebase/firestore";
+import { useSearchParams } from "next/navigation";
 import SellerChatScreenWrapper from "@/components/chat/SellerChatScreenWrapper";
+import ChatScreen from "@/components/chat/ChatScreen";
+import KakaoChatInputBar from "@/components/chat/KakaoChatInputBar";
 
-interface Inquiry {
-  id: string;
-  name: string;
-  phone: string;
-  createdAt: any;
-  lastMessage?: string;
-  unread?: boolean;
-  pinned?: boolean;
-  read?: boolean;
-  category?: string;
-}
-
-export default function SellerLiveChatWrapper() {
-  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
-  const [sellerId, setSellerId] = useState<string>("");
-  const [search, setSearch] = useState<string>("");
-  const [openTime, setOpenTime] = useState("11:00");
-  const [closeTime, setCloseTime] = useState("15:00");
-  const router = useRouter();
+export default function SellerLiveChatPage() {
   const searchParams = useSearchParams();
+  const sellerId = searchParams.get("seller") || "";
+  const inquiryId = searchParams.get("inquiry") || "";
 
-  const selectedInquiryId = searchParams.get("inquiry");
-  const selectedSellerId = searchParams.get("seller");
-
-  useEffect(() => {
-    const uid = localStorage.getItem("uid");
-    if (uid) setSellerId(uid);
-  }, []);
-
-  useEffect(() => {
-    if (!sellerId) return;
-
-    const sellerRef = doc(db, "sellers", sellerId);
-    getDoc(sellerRef).then((snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        setOpenTime(data.openTime || "11:00");
-        setCloseTime(data.closeTime || "15:00");
-      }
-    });
-
-    const q = query(
-      collection(db, "sellers", sellerId, "inquiries"),
-      orderBy("createdAt", "desc")
-    );
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const results: Inquiry[] = await Promise.all(
-        snapshot.docs.map(async (docSnap) => {
-          const id = docSnap.id;
-          const data = docSnap.data();
-          const messagesSnap = await getDocs(
-            query(
-              collection(db, "sellers", sellerId, "inquiries", id, "messages"),
-              orderBy("createdAt", "desc"),
-              limit(1)
-            )
-          );
-          const lastMessage = messagesSnap.docs[0]?.data()?.text || "";
-          const unread = data.alert === true;
-          const read = data.alert === false;
-          const pinned = data.pinned === true;
-          const category = data.category || "일반";
-          return {
-            id,
-            name: data.name,
-            phone: data.phone,
-            createdAt: data.createdAt,
-            lastMessage,
-            unread,
-            read,
-            pinned,
-            category
-          };
-        })
-      );
-      const sorted = results.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
-      setInquiries(sorted);
-    });
-    return () => unsubscribe();
-  }, [sellerId]);
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("정말 삭제하시겠습니까?")) return;
-    try {
-      await deleteDoc(doc(db, "sellers", sellerId, "inquiries", id));
-    } catch (e) {
-      alert("삭제 중 오류 발생");
-    }
-  };
-
-  const filtered = inquiries.filter((i) =>
-    i.name.toLowerCase().includes(search.toLowerCase()) ||
-    i.phone.includes(search)
-  );
-
-  const formatTime = (ts: any) => {
-    if (!ts?.seconds) return "";
-    const date = new Date(ts.seconds * 1000);
-    const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
-    if (isToday) return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    const diff = now.getTime() - date.getTime();
-    if (diff < 86400000 * 2 && date.getDate() === now.getDate() - 1) return "어제";
-    return date.toLocaleDateString();
-  };
-
-  const isOutOfHours = (() => {
-    const now = new Date();
-    const [openHour, openMinute] = openTime.split(":").map(Number);
-    const [closeHour, closeMinute] = closeTime.split(":").map(Number);
-    const open = new Date();
-    open.setHours(openHour, openMinute, 0);
-    const close = new Date();
-    close.setHours(closeHour, closeMinute, 0);
-    return now < open || now >= close;
-  })();
-
-  const selected = filtered.find((i) => i.id === selectedInquiryId);
+  if (!sellerId || !inquiryId) {
+    return <div className="p-4 text-gray-500">채팅 정보를 불러올 수 없습니다.</div>;
+  }
 
   return (
-    <main className="h-screen bg-gray-50 flex flex-col">
-      <div className="p-4 border-b">
-        <input
-          type="text"
-          placeholder="🔍 이름 또는 전화번호 검색"
-          className="w-full px-3 py-2 border rounded"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
-        {filtered.map((inq) => (
-          <div
-            key={inq.id}
-            className={`bg-white hover:bg-gray-100 transition rounded-lg px-4 py-3 flex flex-col shadow-sm relative group ${inq.pinned ? 'border-l-4 border-yellow-400' : ''}`}
-          >
-            <button
-              onClick={() => handleDelete(inq.id)}
-              className="absolute right-0 top-0 bottom-0 w-20 bg-red-500 text-white text-sm hidden group-hover:flex justify-center items-center"
-            >
-              삭제
-            </button>
-
-            <div
-              className="w-full cursor-pointer"
-              onClick={() => router.push(`/seller-live-chat?seller=${sellerId}&inquiry=${inq.id}`)}
-            >
-              <div className="flex justify-between items-center">
-                <div className="truncate text-base font-bold text-gray-800 max-w-[85%]">
-                  {inq.name} / {inq.phone}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {formatTime(inq.createdAt)}
-                </div>
-              </div>
-              <div className="text-sm text-gray-600 mt-1 line-clamp-1">
-                {inq.lastMessage || "최근 메시지 없음"}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {selectedSellerId && selectedInquiryId && (
-        <div className="fixed inset-0 z-50 bg-white border-l flex flex-col animate-slide-in">
-          {isOutOfHours && (
-            <div className="sticky top-0 z-10 text-sm text-white bg-gray-800 py-1 px-2">
-              ● 상담원 부재중 (상담 가능 시간: {openTime} ~ {closeTime})
-            </div>
-          )}
-
-          {/* 👤 고객 이름 및 전화번호 표시 */}
-          {selected && (
-            <div className="sticky top-6 z-10 bg-white px-4 py-2 border-b">
-              <div className="text-base font-semibold text-gray-900 truncate">
-                {selected.name} / {selected.phone}
-              </div>
-            </div>
-          )}
-
-          <div className="flex-1 overflow-hidden">
-            <SellerChatScreenWrapper
-              sellerId={selectedSellerId}
-              inquiryId={selectedInquiryId}
-            />
-          </div>
-          <div className="h-20" />
-        </div>
-      )}
+    <main className="h-screen bg-white">
+      <SellerChatScreenWrapper
+        sellerId={sellerId}
+        inquiryId={inquiryId}
+      />
     </main>
   );
 }
