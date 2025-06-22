@@ -14,7 +14,7 @@ import {
   deleteDoc,
   doc
 } from "firebase/firestore";
-import ChatScreenWrapper from "@/components/chat/ChatScreenWrapper";
+import SellerChatScreenWrapper from "@/components/chat/SellerChatScreenWrapper";
 
 interface Inquiry {
   id: string;
@@ -167,14 +167,14 @@ export default function SellerLiveChatWrapper() {
             </div>
           )}
           <div className="flex-1 overflow-hidden">
-            <ChatScreenWrapper
+            <SellerChatScreenWrapper
               sellerId={selectedSellerId}
               inquiryId={selectedInquiryId}
             />
           </div>
+         <div className="h-20" />
         </div>
       )}
     </main>
   );
 }
-

@@ -73,7 +73,7 @@ export default function KakaoChatInputBar({ sellerId, inquiryId, userType, scrol
   };
 
   return (
-    <div className={`bg-white border-t border-gray-300 ${userType === "seller" ? "fixed bottom-20 left-0 right-0 z-20" : ""}`}>
+    <div className={`bg-white border-t border-gray-300 ${userType === "seller" ? "fixed bottom-[88px] left-0 right-0 z-20" : ""}`}>
       <div className="flex justify-between items-center px-4 py-1 text-sm text-gray-700 bg-gray-100 sticky top-0 z-10">
         <div>
           {sellerOnline ? (
