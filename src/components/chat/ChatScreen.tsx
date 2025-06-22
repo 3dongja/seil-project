@@ -76,9 +76,10 @@ interface ChatScreenProps {
     name?: string;
     phone?: string;
   };
+  useApiSummary?: boolean; // ✅ 추가됨
 }
 
-export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm = "", sortOrder = "asc", category, summaryInfo }: ChatScreenProps) {
+export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm = "", sortOrder = "asc", category, summaryInfo, useApiSummary }: ChatScreenProps) {
   const [messages, setMessages] = useState<any[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [valid, setValid] = useState(false);
@@ -111,13 +112,33 @@ export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm =
       const settingsRef = doc(db, "sellers", sellerId, "settings", "chatbot");
       const settingsSnap = await getDoc(settingsRef);
       const systemPrompt = settingsSnap.exists() ? settingsSnap.data() : {};
-      const summary = await getSummaryFromAnswers(sellerId, resolvedCategory, answers, systemPrompt);
-      await setDoc(doc(db, "sellers", sellerId, "inquiries", inquiryId, "summary", "auto"), {
-        category: resolvedCategory,
-        answers,
-        summary,
-        updatedAt: new Date()
-      });
+
+      if (useApiSummary) {
+        const messages = [
+          ...Object.entries(answers).map(([k, v]) => ({ role: "user", content: `${k}: ${v}` }))
+        ];
+        const response = await fetch("/api/summary", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sellerId, inquiryId, messages })
+        });
+        const data = await response.json();
+        await setDoc(doc(db, "sellers", sellerId, "inquiries", inquiryId, "summary", "auto"), {
+          category: resolvedCategory,
+          answers,
+          summary: data.summary,
+          updatedAt: new Date()
+        });
+      } else {
+        const summary = await getSummaryFromAnswers(sellerId, resolvedCategory, answers, systemPrompt);
+        await setDoc(doc(db, "sellers", sellerId, "inquiries", inquiryId, "summary", "auto"), {
+          category: resolvedCategory,
+          answers,
+          summary,
+          updatedAt: new Date()
+        });
+      }
+
       setLastSummaryInput(inputText);
     };
     fetchSummary();

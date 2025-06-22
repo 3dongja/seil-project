@@ -1,7 +1,7 @@
 // ChatListPage.tsx - 채팅 목록 전용 분리
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import {
@@ -13,7 +13,8 @@ import {
   limit,
   deleteDoc,
   doc,
-  getDoc
+  getDoc,
+  updateDoc
 } from "firebase/firestore";
 
 interface Inquiry {
@@ -37,7 +38,9 @@ export default function ChatListPage({ sellerId }: ChatListPageProps) {
   const [search, setSearch] = useState<string>("");
   const [openTime, setOpenTime] = useState("11:00");
   const [closeTime, setCloseTime] = useState("15:00");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const router = useRouter();
+  const swipeRefs = useRef<Record<string, number>>({});
 
   useEffect(() => {
     if (!sellerId) return;
@@ -100,6 +103,32 @@ export default function ChatListPage({ sellerId }: ChatListPageProps) {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (!confirm("선택한 채팅을 모두 삭제할까요?")) return;
+    try {
+      await Promise.all(selectedIds.map(id => deleteDoc(doc(db, "sellers", sellerId, "inquiries", id))));
+      setSelectedIds([]);
+    } catch (e) {
+      alert("일괄 삭제 중 오류 발생");
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleTogglePin = async (id: string, current: boolean) => {
+    try {
+      await updateDoc(doc(db, "sellers", sellerId, "inquiries", id), {
+        pinned: !current
+      });
+    } catch (e) {
+      alert("핀 고정/해제 중 오류 발생");
+    }
+  };
+
   const filtered = inquiries.filter((i) =>
     i.name.toLowerCase().includes(search.toLowerCase()) ||
     i.phone.includes(search)
@@ -116,6 +145,18 @@ export default function ChatListPage({ sellerId }: ChatListPageProps) {
     return date.toLocaleDateString();
   };
 
+  const handleTouchStart = (id: string, x: number) => {
+    swipeRefs.current[id] = x;
+  };
+
+  const handleTouchEnd = (id: string, x: number) => {
+    const delta = x - swipeRefs.current[id];
+    const el = document.getElementById(`slide-${id}`);
+    if (!el) return;
+    if (delta < -30) el.classList.add("-translate-x-20");
+    else el.classList.remove("-translate-x-20");
+  };
+
   return (
     <main className="h-screen bg-gray-50 flex flex-col">
       <div className="p-4 border-b">
@@ -128,38 +169,77 @@ export default function ChatListPage({ sellerId }: ChatListPageProps) {
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {filtered.map((inq) => (
           <div
             key={inq.id}
-            className={`bg-white hover:bg-gray-100 transition rounded-lg px-4 py-3 flex flex-col shadow-sm relative group ${inq.pinned ? 'border-l-4 border-yellow-400' : ''}`}
+            className="relative overflow-hidden rounded-xl shadow-md bg-white"
           >
-            <button
-              onClick={() => handleDelete(inq.id)}
-              className="absolute right-0 top-0 bottom-0 w-20 bg-red-500 text-white text-sm hidden group-hover:flex justify-center items-center"
-            >
-              삭제
-            </button>
-
             <div
-              className="w-full cursor-pointer"
-              onClick={() => router.push(`/seller-live-chat?seller=${sellerId}&inquiry=${inq.id}`)}
+              id={`slide-${inq.id}`}
+              className="flex transform transition-transform duration-500 ease-in-out"
+              onTouchStart={(e) => handleTouchStart(inq.id, e.touches[0].clientX)}
+              onTouchEnd={(e) => handleTouchEnd(inq.id, e.changedTouches[0].clientX)}
             >
-              <div className="flex justify-between items-center">
-                <div className="truncate text-base font-bold text-gray-800 max-w-[85%]">
-                  {inq.name} / {inq.phone}
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(inq.id)}
+                  onChange={() => toggleSelect(inq.id)}
+                  className="mx-2"
+                />
+              </div>
+
+              <div
+                className="flex-1 px-4 py-3 cursor-pointer"
+                onClick={() => router.push(`/seller-live-chat?seller=${sellerId}&inquiry=${inq.id}`)}
+              >
+                <div className="flex justify-between items-center">
+                  <div className="truncate text-base font-semibold text-gray-900 max-w-[70%]">
+                    {inq.name} / {inq.phone}
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {inq.unread && <span className="text-blue-500 text-xs">●</span>}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleTogglePin(inq.id, inq.pinned || false);
+                      }}
+                      className="text-gray-400 hover:text-yellow-500 text-sm"
+                    >
+                      {inq.pinned ? "📌" : "📍"}
+                    </button>
+                    <div className="text-xs text-gray-500">
+                      {formatTime(inq.createdAt)}
+                    </div>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-500">
-                  {formatTime(inq.createdAt)}
+                <div className="text-sm text-gray-500 mt-1 line-clamp-1">
+                  {inq.lastMessage || "최근 메시지 없음"}
                 </div>
               </div>
-              <div className="text-sm text-gray-600 mt-1 line-clamp-1">
-                {inq.lastMessage || "최근 메시지 없음"}
-              </div>
+
+              <button
+                onClick={() => handleDelete(inq.id)}
+                className="w-20 bg-red-500 text-white text-sm flex justify-center items-center"
+              >
+                삭제
+              </button>
             </div>
           </div>
         ))}
       </div>
+
+      {selectedIds.length > 0 && (
+        <div className="p-4 border-t bg-white">
+          <button
+            onClick={handleBulkDelete}
+            className="w-full py-2 bg-red-600 text-white rounded"
+          >
+            선택 항목 삭제 ({selectedIds.length})
+          </button>
+        </div>
+      )}
     </main>
   );
 }

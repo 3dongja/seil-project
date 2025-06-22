@@ -40,6 +40,7 @@ export default function Page() {
         inquiryId={inquiryId}
         userType="consumer"
         category={category}
+        useApiSummary={true} // ✅ fetch(/api/summary) 사용 명시
       />
     </main>
   );

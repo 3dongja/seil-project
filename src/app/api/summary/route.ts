@@ -20,6 +20,7 @@ export async function POST(req: Request) {
   const { sellerId, inquiryId, messages, plan = "free" } = body;
 
   if (!sellerId || !inquiryId || !Array.isArray(messages)) {
+    console.warn("요약 요청 파라미터 누락 또는 형식 오류", { sellerId, inquiryId, messages });
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
