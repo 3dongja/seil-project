@@ -1,4 +1,4 @@
-// ChatListPage.tsx
+// ChatListPage.tsx - 채팅 목록 전용 분리
 "use client";
 
 import { useEffect, useState } from "react";
