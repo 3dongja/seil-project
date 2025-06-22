@@ -79,7 +79,7 @@ export default function SellerLogsPage() {
             >
               삭제
             </button>
-            <div onClick={() => router.push(`/seller-live-chat?seller=${user!.uid}&inquiry=${log.id}`)}>
+            <div onClick={() => router.push(`/seller-live-chat/view?seller=${user!.uid}&inquiry=${log.id}`)}>
               <p className="text-sm text-gray-500">
                 {log.createdAt?.seconds
                   ? new Date(log.createdAt.seconds * 1000).toLocaleString()
