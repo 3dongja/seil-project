@@ -1,4 +1,4 @@
-// ChatListPage.tsx - 채팅 목록 전용 분리
+// ChatListPage.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -28,18 +28,16 @@ interface Inquiry {
   category?: string;
 }
 
-export default function ChatListPage() {
+interface ChatListPageProps {
+  sellerId: string;
+}
+
+export default function ChatListPage({ sellerId }: ChatListPageProps) {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
-  const [sellerId, setSellerId] = useState<string>("");
   const [search, setSearch] = useState<string>("");
   const [openTime, setOpenTime] = useState("11:00");
   const [closeTime, setCloseTime] = useState("15:00");
   const router = useRouter();
-
-  useEffect(() => {
-    const uid = localStorage.getItem("uid");
-    if (uid) setSellerId(uid);
-  }, []);
 
   useEffect(() => {
     if (!sellerId) return;
