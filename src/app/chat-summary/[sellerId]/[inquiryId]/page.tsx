@@ -22,7 +22,7 @@ export default function Page() {
 
   useEffect(() => {
     if (!sellerId) return;
-    const ref = doc(db, "sellers", sellerId, "settings", "chatbot");
+    const ref = doc(db, "sellers", sellerId);
     getDoc(ref).then((snap) => {
       const data = snap.data();
       if (data?.openTime) setOpenTime(data.openTime);

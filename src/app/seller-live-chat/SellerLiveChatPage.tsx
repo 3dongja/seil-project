@@ -1,5 +1,5 @@
+// SellerLiveChatPage.tsx 개선된 채팅 리스트 UI + 상담 가능 시간 동적 처리
 "use client";
-export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -12,7 +12,8 @@ import {
   getDocs,
   limit,
   deleteDoc,
-  doc
+  doc,
+  getDoc
 } from "firebase/firestore";
 import SellerChatScreenWrapper from "@/components/chat/SellerChatScreenWrapper";
 
@@ -32,15 +33,13 @@ export default function SellerLiveChatWrapper() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [sellerId, setSellerId] = useState<string>("");
   const [search, setSearch] = useState<string>("");
+  const [openTime, setOpenTime] = useState("11:00");
+  const [closeTime, setCloseTime] = useState("15:00");
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const selectedInquiryId = searchParams.get("inquiry");
   const selectedSellerId = searchParams.get("seller");
-
-  const now = new Date();
-  const currentHour = now.getHours();
-  const isOutOfHours = currentHour < 11 || currentHour >= 15;
 
   useEffect(() => {
     const uid = localStorage.getItem("uid");
@@ -49,6 +48,16 @@ export default function SellerLiveChatWrapper() {
 
   useEffect(() => {
     if (!sellerId) return;
+
+    const sellerRef = doc(db, "sellers", sellerId);
+    getDoc(sellerRef).then((snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setOpenTime(data.openTime || "11:00");
+        setCloseTime(data.closeTime || "15:00");
+      }
+    });
+
     const q = query(
       collection(db, "sellers", sellerId, "inquiries"),
       orderBy("createdAt", "desc")
@@ -114,6 +123,17 @@ export default function SellerLiveChatWrapper() {
     return date.toLocaleDateString();
   };
 
+  const isOutOfHours = (() => {
+    const now = new Date();
+    const [openHour, openMinute] = openTime.split(":").map(Number);
+    const [closeHour, closeMinute] = closeTime.split(":").map(Number);
+    const open = new Date();
+    open.setHours(openHour, openMinute, 0);
+    const close = new Date();
+    close.setHours(closeHour, closeMinute, 0);
+    return now < open || now >= close;
+  })();
+
   return (
     <main className="h-screen bg-gray-50 flex flex-col">
       <div className="p-4 border-b">
@@ -130,30 +150,30 @@ export default function SellerLiveChatWrapper() {
         {filtered.map((inq) => (
           <div
             key={inq.id}
-            className={`bg-white shadow rounded-lg p-4 relative group overflow-hidden ${inq.pinned ? 'border-l-4 border-yellow-400' : ''}`}
+            className={`bg-white hover:bg-gray-100 transition rounded-lg px-4 py-3 flex flex-col shadow-sm relative group ${inq.pinned ? 'border-l-4 border-yellow-400' : ''}`}
           >
             <button
               onClick={() => handleDelete(inq.id)}
-              className="absolute right-0 top-0 bottom-0 w-20 bg-red-500 text-white text-sm hidden group-hover:block"
+              className="absolute right-0 top-0 bottom-0 w-20 bg-red-500 text-white text-sm hidden group-hover:flex justify-center items-center"
             >
               삭제
             </button>
+
             <div
-              className="cursor-pointer pr-20"
+              className="w-full cursor-pointer"
               onClick={() => router.push(`/seller-live-chat?seller=${sellerId}&inquiry=${inq.id}`)}
             >
-              <div className="flex justify-between">
-                <div className="font-semibold flex gap-1 items-center">
+              <div className="flex justify-between items-center">
+                <div className="truncate text-base font-bold text-gray-800 max-w-[85%]">
                   {inq.name} / {inq.phone}
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 rounded-full ml-2">{inq.category}</span>
-                  {inq.unread && <span className="text-xs bg-red-500 text-white px-1.5 rounded-full">N</span>}
-                  {inq.read && <span className="text-xs text-gray-400">✓</span>}
                 </div>
                 <div className="text-xs text-gray-500">
                   {formatTime(inq.createdAt)}
                 </div>
               </div>
-              <div className="text-sm text-gray-600 mt-1 line-clamp-1">{inq.lastMessage}</div>
+              <div className="text-sm text-gray-600 mt-1 line-clamp-1">
+                {inq.lastMessage || "최근 메시지 없음"}
+              </div>
             </div>
           </div>
         ))}
@@ -163,7 +183,7 @@ export default function SellerLiveChatWrapper() {
         <div className="fixed inset-0 z-50 bg-white border-l flex flex-col animate-slide-in">
           {isOutOfHours && (
             <div className="sticky top-0 z-10 text-sm text-white bg-gray-800 py-1 px-2">
-              ● 상담원 부재중 (상담 가능 시간: 11:00 ~ 15:00)
+              ● 상담원 부재중 (상담 가능 시간: {openTime} ~ {closeTime})
             </div>
           )}
           <div className="flex-1 overflow-hidden">
@@ -172,7 +192,7 @@ export default function SellerLiveChatWrapper() {
               inquiryId={selectedInquiryId}
             />
           </div>
-         <div className="h-20" />
+          <div className="h-20" />
         </div>
       )}
     </main>
