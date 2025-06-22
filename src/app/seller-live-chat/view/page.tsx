@@ -13,7 +13,7 @@ export default function ChatViewRoute() {
 
   return (
     <Suspense fallback={<div>로딩 중...</div>}>
-      <SellerLiveChatPage sellerId={sellerId} inquiryId={inquiryId} />
+      <SellerLiveChatPage />
     </Suspense>
   );
 }
