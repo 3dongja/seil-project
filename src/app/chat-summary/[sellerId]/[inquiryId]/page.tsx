@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -13,6 +13,9 @@ export default function Page() {
     sellerId: string;
     inquiryId: string;
   };
+
+  const searchParams = useSearchParams();
+  const category = searchParams.get("category") ?? "문의";
 
   const [openTime, setOpenTime] = useState("");
   const [closeTime, setCloseTime] = useState("");
@@ -36,6 +39,7 @@ export default function Page() {
         sellerId={sellerId}
         inquiryId={inquiryId}
         userType="consumer"
+        category={category}
       />
     </>
   );

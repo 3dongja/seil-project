@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase";
 import KakaoChatInputBar from "./KakaoChatInputBar";
 import CategoryForm from "./CategoryForm";
 import { getSummaryFromAnswers } from "@/lib/summary";
+import { useSearchParams } from "next/navigation"; // ✅ 추가
 
 function formatTime(timestamp: any) {
   if (!timestamp) return "";
@@ -76,7 +77,7 @@ interface ChatScreenProps {
   userType: "seller" | "consumer";
   searchTerm?: string;
   sortOrder?: "asc" | "desc";
-  category: string;
+  category?: string;
 }
 
 export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm = "", sortOrder = "asc", category }: ChatScreenProps) {
@@ -85,6 +86,8 @@ export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm =
   const [valid, setValid] = useState(false);
   const [lastSummaryInput, setLastSummaryInput] = useState<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
+  const resolvedCategory = category ?? searchParams.get("category") ?? "문의";
 
   useEffect(() => {
     const q = query(
@@ -110,9 +113,9 @@ export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm =
       const settingsRef = doc(db, "sellers", sellerId, "settings", "chatbot");
       const settingsSnap = await getDoc(settingsRef);
       const systemPrompt = settingsSnap.exists() ? settingsSnap.data() : {};
-      const summary = await getSummaryFromAnswers(sellerId, category, answers, systemPrompt);
+      const summary = await getSummaryFromAnswers(sellerId, resolvedCategory, answers, systemPrompt);
       await setDoc(doc(db, "sellers", sellerId, "inquiries", inquiryId, "summary", "auto"), {
-        category,
+        category: resolvedCategory,
         answers,
         summary,
         updatedAt: new Date()
@@ -124,7 +127,7 @@ export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm =
 
   return (
     <div className="p-4 space-y-4">
-      <CategoryForm category={category} onChange={setAnswers} onValidate={setValid} />
+      <CategoryForm category={resolvedCategory} onChange={setAnswers} onValidate={setValid} />
       <ChatMessageList messages={filteredMessages} userType={userType} sellerId={sellerId} inquiryId={inquiryId} />
       <KakaoChatInputBar sellerId={sellerId} inquiryId={inquiryId} userType={userType} />
       <div ref={scrollRef}></div>

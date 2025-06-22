@@ -1,129 +1,144 @@
 // src/app/seller-question-forms/page.tsx
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { collection, doc, getDoc, setDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+import { FormEvent } from "react";
+import Link from "next/link";
 
 export default function SellerQuestionFormsPage() {
+  const [selectedCategory, setSelectedCategory] = useState("문의");
+  const [questions, setQuestions] = useState([
+    { key: "name", label: "이름", required: true },
+    { key: "phone", label: "연락처", required: true },
+  ]);
+  const [templates, setTemplates] = useState(["", "", "", "", ""]);
   const router = useRouter();
-  const [category, setCategory] = useState("반품");
-  const [fields, setFields] = useState<{ key: string; label: string; required: boolean }[]>([]);
-  const [templates, setTemplates] = useState<string[]>(["", "", "", "", ""]);
 
   useEffect(() => {
-    const fetch = async () => {
-      const ref = doc(db, "questionForms", category);
+    const load = async () => {
+      const ref = doc(db, "questionForms", selectedCategory);
       const snap = await getDoc(ref);
       if (snap.exists()) {
         const data = snap.data();
-        setFields(data.fields || []);
+        setQuestions(data.questions || []);
         setTemplates(data.templates || ["", "", "", "", ""]);
       } else {
-        setFields([]);
+        setQuestions([]);
         setTemplates(["", "", "", "", ""]);
       }
     };
-    fetch();
-  }, [category]);
+    load();
+  }, [selectedCategory]);
 
-  const updateField = (index: number, key: keyof (typeof fields)[0], value: string | boolean) => {
-    const updated = [...fields];
-    updated[index] = { ...updated[index], [key]: value };
-    setFields(updated);
-  };
-
-  const deleteTemplate = (index: number) => {
-    const updated = [...templates];
-    updated[index] = "";
-    setTemplates(updated);
-  };
-
-  const save = async () => {
-    await setDoc(doc(db, "questionForms", category), {
-      fields,
-      templates: templates.filter((t) => t.trim() !== "")
+  const save = async (e: FormEvent) => {
+    e.preventDefault();
+    await setDoc(doc(db, "questionForms", selectedCategory), {
+      questions,
+      templates,
     });
-    alert("설정이 저장되었습니다.");
+    alert("저장되었습니다");
   };
 
   return (
-    <div className="p-4 space-y-4 max-w-md mx-auto">
-      <div className="flex justify-between items-center">
-        <h1 className="text-lg font-bold">질문 템플릿 설정</h1>
-        <button onClick={() => router.back()} className="text-sm text-blue-600">← 나가기</button>
-      </div>
+    <div className="max-w-2xl mx-auto space-y-6 px-4 py-8">
+      <h1 className="text-lg font-semibold">카테고리별 질문 설정</h1>
 
       <select
-        value={category}
-        onChange={(e) => setCategory(e.target.value)}
-        className="border rounded p-2 w-full"
+        className="border p-2 rounded"
+        value={selectedCategory}
+        onChange={(e) => setSelectedCategory(e.target.value)}
       >
-        <option value="반품">반품</option>
         <option value="문의">문의</option>
         <option value="예약">예약</option>
+        <option value="반품">반품</option>
+        <option value="배송">배송</option>
         <option value="기타">기타</option>
       </select>
 
-      <div className="space-y-2">
-        <h2 className="font-semibold">질문 항목</h2>
-        {fields.map((field, idx) => (
-          <div key={idx} className="flex items-center space-x-2">
-            <input
-              className="border p-1 rounded w-1/3"
-              placeholder="key"
-              value={field.key}
-              onChange={(e) => updateField(idx, "key", e.target.value)}
-            />
-            <input
-              className="border p-1 rounded w-1/2"
-              placeholder="label"
-              value={field.label}
-              onChange={(e) => updateField(idx, "label", e.target.value)}
-            />
-            <input
-              type="checkbox"
-              checked={field.required}
-              onChange={(e) => updateField(idx, "required", e.target.checked)}
-            />
-          </div>
-        ))}
-        <button
-          onClick={() => setFields([...fields, { key: "", label: "", required: false }])}
-          className="text-sm text-blue-600"
-        >
-          + 항목 추가
-        </button>
-      </div>
+      <form onSubmit={save} className="space-y-4">
+        <div className="space-y-2">
+          <h2 className="font-semibold">질문 항목</h2>
+          {questions.map((q, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                className="border p-1 rounded w-1/4"
+                placeholder="key"
+                value={q.key}
+                onChange={(e) => {
+                  const copy = [...questions];
+                  copy[i].key = e.target.value;
+                  setQuestions(copy);
+                }}
+              />
+              <input
+                className="border p-1 rounded w-1/2"
+                placeholder="label"
+                value={q.label}
+                onChange={(e) => {
+                  const copy = [...questions];
+                  copy[i].label = e.target.value;
+                  setQuestions(copy);
+                }}
+              />
+              <label className="text-sm">
+                <input
+                  type="checkbox"
+                  checked={q.required}
+                  onChange={(e) => {
+                    const copy = [...questions];
+                    copy[i].required = e.target.checked;
+                    setQuestions(copy);
+                  }}
+                />
+                필수
+              </label>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="text-blue-600 text-sm"
+            onClick={() => setQuestions([...questions, { key: "", label: "", required: false }])}
+          >
+            + 항목 추가
+          </button>
+        </div>
 
-      <div className="space-y-2">
-        <h2 className="font-semibold">템플릿 응답</h2>
-        {templates.map((text, idx) => (
-          <div key={idx} className="flex items-center space-x-2">
+        <div className="space-y-2">
+          <h2 className="font-semibold">GPT 응답 템플릿 (최대 5개)</h2>
+          {templates.map((t, i) => (
             <input
-              className="border rounded p-2 w-full"
-              placeholder={`템플릿 ${idx + 1}`}
-              value={text}
+              key={i}
+              className="border p-1 rounded w-full"
+              placeholder={`응답 ${i + 1}`}
+              value={t}
               onChange={(e) => {
                 const copy = [...templates];
-                copy[idx] = e.target.value;
+                copy[i] = e.target.value;
                 setTemplates(copy);
               }}
             />
-            {text.trim() !== "" && (
-              <button onClick={() => deleteTemplate(idx)} className="text-red-500 text-sm">삭제</button>
-            )}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      <button
-        onClick={save}
-        className="bg-black text-white w-full py-2 rounded shadow"
-      >
-        저장하기
-      </button>
+        <div className="text-right">
+          <Link
+            href={`/chat-summary/demoSeller/demoInquiry?category=${selectedCategory}`}
+            className="text-sm text-blue-600 underline block mb-2"
+          >
+            챗봇 미리보기 →
+          </Link>
+          <button
+            type="submit"
+            className="bg-black text-white px-4 py-2 rounded text-sm"
+          >
+            저장하기
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
