@@ -48,7 +48,8 @@ export async function POST(req: Request) {
 
 - 요약은 다음 항목만 포함: 요청내용, 이유, 날짜, 연락처
 - 말머리 제거: "고객은", "요약:" 금지
-- 1~2문장 간결 요약`;
+- 1~2문장 간결 요약
+- \u001b[1m만약 요청내용, 이유, 날짜, 연락처 중 누락된 항목이 있다면 대화 내용을 기반으로 합리적으로 추론해 채워넣으세요.\u001b[0m`;
 
   const summaryMessages = [
     { role: "system", content: systemPrompt },
@@ -113,8 +114,8 @@ export async function POST(req: Request) {
       }
     }
 
-    const compressed = `입력:${messages.map(m => m.content).join(" ").replace(/\s+/g, "")}` +
-      ` 요약:${summary.replace(/\s+/g, "")}`;
+    const compressed = `입력:${messages.map(m => m.content).join(" ").replace(/\s+/g,"")}` +
+      ` 요약:${summary.replace(/\s+/g,"")}`;
     await addDoc(collection(db, "adminSummaryStore"), {
       sellerId,
       inquiryId,

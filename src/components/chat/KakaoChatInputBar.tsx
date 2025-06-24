@@ -9,9 +9,11 @@ interface KakaoChatInputBarProps {
   inquiryId: string;
   userType: "seller" | "consumer";
   scrollToBottom?: () => void;
+  disabled?: boolean;
+  onSend?: (text: string) => Promise<void>;
 }
 
-export default function KakaoChatInputBar({ sellerId, inquiryId, userType, scrollToBottom }: KakaoChatInputBarProps) {
+export default function KakaoChatInputBar({ sellerId, inquiryId, userType, scrollToBottom, disabled = false, onSend }: KakaoChatInputBarProps) {
   const [text, setText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [sellerOnline, setSellerOnline] = useState(false);
@@ -42,17 +44,22 @@ export default function KakaoChatInputBar({ sellerId, inquiryId, userType, scrol
   }, [sellerId]);
 
   const handleSend = async () => {
-    if (!text.trim()) return;
-    await addDoc(collection(db, "sellers", sellerId, "inquiries", inquiryId, "messages"), {
-      text,
-      sender: userType,
-      createdAt: serverTimestamp(),
-    });
+    if (!text.trim() || disabled) return;
 
-    if (userType === "consumer") {
-      await updateDoc(doc(db, "sellers", sellerId), {
-        selectedInquiryId: inquiryId,
+    if (onSend) {
+      await onSend(text);
+    } else {
+      await addDoc(collection(db, "sellers", sellerId, "inquiries", inquiryId, "messages"), {
+        text,
+        sender: userType,
+        createdAt: serverTimestamp(),
       });
+
+      if (userType === "consumer") {
+        await updateDoc(doc(db, "sellers", sellerId), {
+          selectedInquiryId: inquiryId,
+        });
+      }
     }
 
     setText("");
@@ -91,6 +98,7 @@ export default function KakaoChatInputBar({ sellerId, inquiryId, userType, scrol
         <button
           className="text-gray-700 px-2"
           onClick={() => fileInputRef.current?.click()}
+          disabled={disabled}
         >
           📎
         </button>
@@ -107,8 +115,9 @@ export default function KakaoChatInputBar({ sellerId, inquiryId, userType, scrol
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          disabled={disabled}
         />
-        <button onClick={handleSend} className="text-gray-700 px-2">
+        <button onClick={handleSend} className="text-gray-700 px-2" disabled={disabled}>
           📤
         </button>
       </div>

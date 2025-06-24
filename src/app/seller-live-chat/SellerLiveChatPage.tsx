@@ -1,10 +1,7 @@
-// SellerLiveChatPage.tsx - 채팅방 전용 화면 (채팅 UI만 보여줌)
 "use client";
 
 import { useSearchParams } from "next/navigation";
 import SellerChatScreenWrapper from "@/components/chat/SellerChatScreenWrapper";
-import ChatScreen from "@/components/chat/ChatScreen";
-import KakaoChatInputBar from "@/components/chat/KakaoChatInputBar";
 
 export default function SellerLiveChatPage() {
   const searchParams = useSearchParams();
@@ -17,10 +14,7 @@ export default function SellerLiveChatPage() {
 
   return (
     <main className="h-screen bg-white">
-      <SellerChatScreenWrapper
-        sellerId={sellerId}
-        inquiryId={inquiryId}
-      />
+      <SellerChatScreenWrapper sellerId={sellerId} inquiryId={inquiryId} />
     </main>
   );
 }

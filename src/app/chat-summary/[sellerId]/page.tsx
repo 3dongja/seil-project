@@ -4,10 +4,15 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { db, storage } from "@/lib/firebase";
-import { doc, setDoc, updateDoc, serverTimestamp, collection, query, orderBy, limit, getDocs, getDoc } from "firebase/firestore";
+import {
+  doc, setDoc, updateDoc, serverTimestamp,
+  collection, query, orderBy, limit, getDocs, getDoc
+} from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { v4 as uuid } from "uuid";
 import CategoryForm from "@/components/chat/CategoryForm";
+import SummaryResultModal from "@/components/chat-summary/SummaryResultModal";
+import ChatModeScreen from "@/components/chat-summary/ChatModeScreen";
 
 const ChatSummaryPage = () => {
   const router = useRouter();
@@ -25,6 +30,9 @@ const ChatSummaryPage = () => {
   const [loading, setLoading] = useState(false);
   const [openTime, setOpenTime] = useState("");
   const [closeTime, setCloseTime] = useState("");
+  const [mode, setMode] = useState<"chat" | "bot" | "log" | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [lastInquiryId, setLastInquiryId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTimes = async () => {
@@ -48,8 +56,8 @@ const ChatSummaryPage = () => {
     }
 
     setLoading(true);
-
     const id = uuid();
+    setLastInquiryId(id);
     let fileUrl: string | null = null;
 
     try {
@@ -60,11 +68,7 @@ const ChatSummaryPage = () => {
       }
 
       const summaryInput = {
-        name,
-        phone,
-        email,
-        externalId,
-        category,
+        name, phone, email, externalId, category,
         details: categoryData,
         createdAt: serverTimestamp(),
         fileName: file?.name || null,
@@ -85,24 +89,12 @@ const ChatSummaryPage = () => {
 
       if (data.summary) {
         await updateDoc(refDoc, { summary: data.summary });
+        setShowModal(true);
       }
-
-      router.push(`/chat-summary/${sellerId}/${id}`);
     } catch (err) {
       alert("저장 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleChatRedirect = async () => {
-    const q = query(collection(db, "sellers", sellerId, "inquiries"), orderBy("createdAt", "desc"), limit(1));
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      const latest = snap.docs[0].id;
-      router.push(`/chat-summary/${sellerId}/${latest}`);
-    } else {
-      alert("진행 중인 채팅이 없습니다.");
     }
   };
 
@@ -156,19 +148,19 @@ const ChatSummaryPage = () => {
         <button onClick={handleSave} className="w-1/2 py-3 bg-blue-600 text-white rounded font-bold" disabled={loading}>{loading ? "처리 중..." : "저장하기"}</button>
       </div>
 
-      {(!name || !phone) && (
-        <p className="text-red-500 text-sm text-center font-medium pt-2">
-          이름과 연락처를 입력하셔야 채팅이 가능합니다.
-        </p>
+      {showModal && lastInquiryId && (
+        <SummaryResultModal
+          onSelect={(selected) => {
+            setMode(selected);
+            setShowModal(false);
+          }}
+          plan="free"
+        />
       )}
 
-      <button
-        onClick={handleChatRedirect}
-        disabled={!name || !phone}
-        className={`w-full mt-2 py-3 rounded font-bold transition ${!name || !phone ? "bg-gray-300 text-gray-500 cursor-not-allowed" : "bg-yellow-400 hover:bg-yellow-500 text-black"}`}
-      >
-        💬 1:1 채팅 시작하기
-      </button>
+      {mode && lastInquiryId && (
+        <ChatModeScreen mode={mode} sellerId={sellerId} inquiryId={lastInquiryId} />
+      )}
     </main>
   );
 };
