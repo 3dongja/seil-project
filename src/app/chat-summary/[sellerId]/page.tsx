@@ -78,12 +78,17 @@ const ChatSummaryPage = () => {
       const refDoc = doc(db, "sellers", sellerId, "inquiries", id);
       await setDoc(refDoc, summaryInput);
 
-      const text = (`카테고리: ${category}\n` + Object.entries(categoryData || {}).map(([k, v]) => `${k}: ${v}`).join("\n")).slice(0, 1000);
+      const messages = [
+        { role: "user", content: `카테고리: ${category}` },
+        ...Object.entries(categoryData || {})
+          .filter(([_, v]) => v?.trim())
+          .map(([k, v]) => ({ role: "user", content: `${k}: ${v}` }))
+      ];
 
       const res = await fetch("/api/summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sellerId, inquiryId: id, name, phone, category, details: categoryData, text })
+        body: JSON.stringify({ sellerId, inquiryId: id, name, phone, category, details: categoryData, messages })
       });
       const data = await res.json();
 
