@@ -113,14 +113,15 @@ export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm =
       const settingsSnap = await getDoc(settingsRef);
       const systemPrompt = settingsSnap.exists() ? settingsSnap.data() : {};
 
-      if (useApiSummary) {
-        const messages = [
-          ...Object.entries(answers).map(([k, v]) => ({ role: "user", content: `${k}: ${v}` }))
-        ];
+      const messageEntries = Object.entries(answers)
+        .filter(([_, v]) => v?.trim())
+        .map(([k, v]) => ({ role: "user", content: `${k}: ${v}` }));
+
+      if (useApiSummary && messageEntries.length > 0) {
         const response = await fetch("/api/summary", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sellerId, inquiryId, messages })
+          body: JSON.stringify({ sellerId, inquiryId, messages: messageEntries })
         });
         const data = await response.json();
         await setDoc(doc(db, "sellers", sellerId, "inquiries", inquiryId, "summary", "auto"), {
@@ -129,7 +130,7 @@ export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm =
           summary: data.summary,
           updatedAt: new Date()
         });
-      } else {
+      } else if (!useApiSummary) {
         const summary = await getSummaryFromAnswers(sellerId, resolvedCategory, answers, systemPrompt);
         await setDoc(doc(db, "sellers", sellerId, "inquiries", inquiryId, "summary", "auto"), {
           category: resolvedCategory,
