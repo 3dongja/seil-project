@@ -1,10 +1,16 @@
 import Image from "next/image";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-export default function SummaryResultModal({ onSelect, plan }: {
-  onSelect: (option: "chat" | "bot" | "log") => void;
+export default function SummaryResultModal({
+  plan,
+  onSelect,
+}: {
   plan: "free" | "basic" | "premium";
+  onSelect: (option: "chat" | "bot" | "log") => void;
 }) {
+  const router = useRouter();
+
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
@@ -15,14 +21,17 @@ export default function SummaryResultModal({ onSelect, plan }: {
   const isFree = plan === "free";
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex flex-col items-center justify-center gap-10 p-4">
+    <div className="fixed inset-0 z-50 bg-black/70 flex flex-col items-center justify-center gap-10 p-4 overflow-y-auto">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <button
-          onClick={() => onSelect("chat")}
+          onClick={() => {
+            router.push(`/chat-summary/${localStorage.getItem("sellerId")}/${localStorage.getItem("inquiryId")}`);
+            onSelect("chat");
+          }}
           className="bg-white rounded-2xl shadow-lg p-6 w-72 h-80 flex flex-col items-center justify-between hover:ring-2 ring-blue-400"
         >
           <Image
-            src="/angry.GIF"
+            src="/curious.GIF"
             alt="1:1 상담원"
             width={160}
             height={160}
@@ -30,7 +39,8 @@ export default function SummaryResultModal({ onSelect, plan }: {
           />
           <div className="text-center">
             <h2 className="text-xl font-bold mb-2">상담원 1:1 신청</h2>
-            <p className="text-sm text-gray-600">\              대기 시간이 발생할 수 있습니다. 정확하게 정보를 남겨주시면 빠르게 답변 드리겠습니다.
+            <p className="text-sm text-gray-600">
+              대기 시간이 발생할 수 있습니다. 정확하게 정보를 남겨주시면 빠르게 답변 드리겠습니다.
             </p>
           </div>
         </button>
@@ -41,6 +51,7 @@ export default function SummaryResultModal({ onSelect, plan }: {
               alert("챗봇 기능은 베이직 요금제 이상부터 이용 가능합니다.");
               return;
             }
+            router.push(`/chat-summary/${localStorage.getItem("sellerId")}/${localStorage.getItem("inquiryId")}/bot`);
             onSelect("bot");
           }}
           className={`bg-white rounded-2xl shadow-lg p-6 w-72 h-80 flex flex-col items-center justify-between ${isFree ? "opacity-50 cursor-not-allowed" : "hover:ring-2 ring-green-400"}`}
@@ -63,7 +74,10 @@ export default function SummaryResultModal({ onSelect, plan }: {
       </div>
 
       <button
-        onClick={() => onSelect("log")}
+        onClick={() => {
+          router.push(`/chat-summary/${localStorage.getItem("sellerId")}/${localStorage.getItem("inquiryId")}/summary`);
+          onSelect("log");
+        }}
         className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md flex flex-col items-center justify-center hover:ring-2 ring-gray-400"
       >
         <Image
