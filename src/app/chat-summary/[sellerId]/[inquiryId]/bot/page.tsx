@@ -1,5 +1,10 @@
 import ChatBotScreen from "@/components/chat/ChatBotScreen";
+import { notFound } from "next/navigation";
 
-export default function Page({ params }: { params: { sellerId: string; inquiryId: string } }) {
-  return <ChatBotScreen sellerId={params.sellerId} inquiryId={params.inquiryId} />;
+export default async function Page({ params }: { params: { sellerId: string; inquiryId: string } }) {
+  const { sellerId, inquiryId } = params;
+
+  if (!sellerId || !inquiryId) return notFound();
+
+  return <ChatBotScreen sellerId={sellerId} inquiryId={inquiryId} />;
 }
