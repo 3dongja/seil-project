@@ -1,4 +1,4 @@
-// 대시보드 문의 카드에 "요약 자세히 보기" 버튼 추가 및 스타일 modern하게 개선 + 알림 추가
+// 대시보드 문의 카드에 "요약 자세히 보기" 버튼 추가 및 스타일 modern하게 개선 + 알림 + 링크 복사 버튼 추가 + QR/카카오 공유 + 커스텀 제목 설명
 
 "use client";
 
@@ -22,6 +22,12 @@ interface Inquiry {
   summary?: Record<string, string>;
 }
 
+declare global {
+  interface Window {
+    Kakao: any;
+  }
+}
+
 export default function SellerDashboard() {
   const { user } = useUser();
   const [openTime, setOpenTime] = useState("10:00");
@@ -30,6 +36,8 @@ export default function SellerDashboard() {
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [lastInquiryId, setLastInquiryId] = useState<string | null>(null);
+  const [shareTitle, setShareTitle] = useState("상담 링크");
+  const [shareDescription, setShareDescription] = useState("슈퍼마켓 문의 채널");
 
   useEffect(() => {
     if (!user) return;
@@ -40,6 +48,8 @@ export default function SellerDashboard() {
         const data = snap.data();
         setOpenTime(data.openTime || "10:00");
         setCloseTime(data.closeTime || "18:00");
+        setShareTitle(data.shareTitle || "상담 링크");
+        setShareDescription(data.shareDescription || "슈퍼마켓 문의 채널");
       }
     });
 
@@ -87,20 +97,34 @@ export default function SellerDashboard() {
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const handleKakaoShare = () => {
+    if (!window.Kakao?.Share) {
+      toast.error("카카오 SDK가 로드되지 않았습니다.");
+      return;
+    }
+    window.Kakao.Share.sendDefault({
+      objectType: "feed",
+      content: {
+        title: shareTitle,
+        description: shareDescription,
+        imageUrl: "https://seil.ai.kr/logo.png",
+        link: {
+          mobileWebUrl: `https://seil.ai.kr/chat-summary/${user?.uid}`,
+          webUrl: `https://seil.ai.kr/chat-summary/${user?.uid}`,
+        },
+      },
+    });
+  };
+
   const handleTimeChange = async () => {
     if (!user) return;
     await setDoc(doc(db, "sellers", user.uid), {
       openTime,
       closeTime,
+      shareTitle,
+      shareDescription,
     }, { merge: true });
     toast.success("상담 가능 시간이 저장되었습니다");
-  };
-
-  const linkUrl = `https://seil.ai.kr/chat-summary/${user?.uid}`;
-  const snsLinks = {
-    twitter: `https://twitter.com/intent/tweet?text=상담링크&url=${encodeURIComponent(linkUrl)}`,
-    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(linkUrl)}`,
-    kakao: `https://story.kakao.com/share?url=${encodeURIComponent(linkUrl)}`
   };
 
   return (
@@ -121,9 +145,15 @@ export default function SellerDashboard() {
       <div className="bg-white border rounded-lg p-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2">
           <h2 className="font-semibold">📩 최근 문의</h2>
-          <Link href={`/chat-summary/${user?.uid}`} className="text-blue-600 text-sm flex items-center gap-1">
-            <ChatBubbleLeftRightIcon className="w-4 h-4" /> 요약 보기
-          </Link>
+          <div className="flex gap-2 flex-wrap">
+            <Link href={`/chat-summary/${user?.uid}`} className="text-blue-600 text-sm flex items-center gap-1">
+              <ChatBubbleLeftRightIcon className="w-4 h-4" /> 요약 보기
+            </Link>
+            <button onClick={handleCopy} className="text-sm text-gray-600 hover:text-blue-600 flex items-center gap-1">
+              <ClipboardIcon className="w-4 h-4" /> 링크 복사
+            </button>
+            <button onClick={handleKakaoShare} className="text-sm text-yellow-600 hover:text-yellow-700">🟡 카카오 공유</button>
+          </div>
         </div>
         <ul className="space-y-3">
           {inquiries.map(inq => (
