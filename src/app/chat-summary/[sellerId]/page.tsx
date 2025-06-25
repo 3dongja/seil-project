@@ -6,13 +6,12 @@ import { useRouter, useParams } from "next/navigation";
 import { db, storage } from "@/lib/firebase";
 import {
   doc, setDoc, updateDoc, serverTimestamp,
-  collection, query, orderBy, limit, getDocs, getDoc
+  getDoc
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { v4 as uuid } from "uuid";
 import CategoryForm from "@/components/chat/CategoryForm";
 import SummaryResultModal from "@/components/chat-summary/SummaryResultModal";
-import ChatModeScreen from "@/components/chat-summary/ChatModeScreen";
 
 const ChatSummaryPage = () => {
   const router = useRouter();
@@ -30,7 +29,6 @@ const ChatSummaryPage = () => {
   const [loading, setLoading] = useState(false);
   const [openTime, setOpenTime] = useState("");
   const [closeTime, setCloseTime] = useState("");
-  const [mode, setMode] = useState<"chat" | "bot" | "log" | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [lastInquiryId, setLastInquiryId] = useState<string | null>(null);
 
@@ -94,6 +92,8 @@ const ChatSummaryPage = () => {
 
       if (data.summary) {
         await updateDoc(refDoc, { summary: data.summary });
+        localStorage.setItem("sellerId", sellerId);
+        localStorage.setItem("inquiryId", id);
         setShowModal(true);
       }
     } catch (err) {
@@ -155,16 +155,9 @@ const ChatSummaryPage = () => {
 
       {showModal && lastInquiryId && (
         <SummaryResultModal
-          onSelect={(selected) => {
-            setMode(selected);
-            setShowModal(false);
-          }}
           plan="free"
+          onSelect={() => setShowModal(false)}
         />
-      )}
-
-      {mode && lastInquiryId && (
-        <ChatModeScreen mode={mode} sellerId={sellerId} inquiryId={lastInquiryId} />
       )}
     </main>
   );

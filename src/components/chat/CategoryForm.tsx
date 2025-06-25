@@ -1,68 +1,76 @@
 // src/components/chat/CategoryForm.tsx
-"use client";
-
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
-interface Question {
+export type Question = {
   key: string;
   label: string;
+  placeholder?: string;
   required?: boolean;
-}
+};
 
-type Props = {
+export type Props = {
   category: string;
   onChange: (data: Record<string, string>) => void;
   onValidate?: (valid: boolean) => void;
+  defaultData?: Record<string, string>;
+  forms?: Record<string, { questions: Question[] }>;
+  readOnly?: boolean;
 };
 
-export default function CategoryForm({ category, onChange, onValidate }: Props) {
-  const [questions, setQuestions] = useState<Question[]>([]);
+const CategoryForm = ({ category, onChange, onValidate, defaultData = {}, forms = {}, readOnly = false }: Props) => {
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [questions, setQuestions] = useState<Question[]>([]);
 
   useEffect(() => {
-    const fetchQuestions = async () => {
-      const ref = doc(db, "questionForms", category);
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        const data = snap.data();
-        setQuestions(data.fields || []);
-      } else {
-        setQuestions([]);
-      }
-    };
-    fetchQuestions();
-  }, [category]);
+    setAnswers(defaultData);
+  }, [defaultData]);
 
   useEffect(() => {
     onChange(answers);
+  }, [answers, onChange]);
+
+  useEffect(() => {
+    if (forms?.[category]?.questions?.length) {
+      setQuestions(forms[category].questions);
+    } else {
+      const fetch = async () => {
+        const ref = doc(db, "questionForms", category);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data?.fields) setQuestions(data.fields);
+        }
+      };
+      fetch();
+    }
+  }, [category, forms]);
+
+  useEffect(() => {
     if (onValidate && questions.length > 0) {
-      const valid = questions.every((q) => !q.required || answers[q.key]?.trim());
+      const valid = questions.every((q) => !q.required || answers[q.key]);
       onValidate(valid);
     }
-  }, [answers, questions]);
-
-  const update = (key: string, value: string) => {
-    setAnswers((prev) => ({ ...prev, [key]: value }));
-  };
+  }, [answers, questions, onValidate]);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {questions.map((q) => (
-        <div key={q.key}>
-          <label className="block text-sm font-medium mb-1">
-            {q.label} {q.required && <span className="text-red-500">*</span>}
-          </label>
+        <div key={q.key} className="space-y-1">
+          <label className="block font-medium text-sm text-gray-700">{q.label}</label>
           <input
             type="text"
-            className="w-full border rounded p-2 text-sm"
-            placeholder={q.label}
+            placeholder={q.placeholder || "답변을 입력하세요"}
             value={answers[q.key] || ""}
-            onChange={(e) => update(q.key, e.target.value)}
+            onChange={(e) => setAnswers({ ...answers, [q.key]: e.target.value })}
+            disabled={readOnly}
+            className="w-full border border-gray-300 p-2 rounded-md text-sm"
           />
         </div>
       ))}
     </div>
   );
-}
+};
+
+export default CategoryForm;

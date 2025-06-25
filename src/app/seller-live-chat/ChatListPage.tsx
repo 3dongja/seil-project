@@ -192,12 +192,14 @@ export default function ChatListPage({ sellerId }: ChatListPageProps) {
                 </div>
               </div>
 
-              <button
-                onClick={() => handleDelete(inq.id)}
-                className="absolute right-0 top-0 bottom-0 w-20 bg-red-500 text-white text-sm flex justify-center items-center"
-              >
-                삭제
-              </button>
+              <div className="w-20 bg-red-500 text-white text-sm flex justify-center items-center">
+                <button
+                  onClick={() => handleDelete(inq.id)}
+                  className="w-full h-full"
+                >
+                  삭제
+                </button>
+              </div>
             </div>
           </div>
         ))}

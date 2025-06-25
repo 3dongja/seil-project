@@ -84,19 +84,35 @@ export default function SellerLogsPage() {
             key={log.id}
             className="relative rounded-xl shadow-md bg-white hover:bg-gray-50 overflow-hidden"
           >
-            <div className="flex items-start p-4 cursor-pointer" onClick={() => router.push(`/seller-live-chat/view?seller=${user!.uid}&inquiry=${log.id}`)}>
-              <div className="flex-1">
+            <div className="flex items-start p-4">
+              <div
+                className="flex-1 cursor-pointer"
+                onClick={() =>
+                  router.push(`/chat-summary/${user!.uid}/${log.id}/summary`)
+                }
+              >
                 <div className="flex justify-between items-center">
                   <p className="text-sm text-gray-500">{formatTime(log.createdAt)}</p>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(log);
-                    }}
-                    className="text-sm text-red-500 hover:underline"
-                  >
-                    삭제
-                  </button>
+                  <div className="space-x-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/seller-logs/${log.id}/summary/edit`);
+                      }}
+                      className="text-sm text-blue-600 hover:underline"
+                    >
+                      ✏️ 수정
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(log);
+                      }}
+                      className="text-sm text-red-500 hover:underline"
+                    >
+                      삭제
+                    </button>
+                  </div>
                 </div>
                 <p className="text-base font-semibold text-gray-900">
                   {log.name} / {log.phone}

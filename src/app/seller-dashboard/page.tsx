@@ -1,3 +1,5 @@
+// 대시보드 문의 카드에 "요약 자세히 보기" 버튼 추가 및 스타일 modern하게 개선 + 알림 추가
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,7 +8,7 @@ import { collection, doc, getDoc, onSnapshot, orderBy, query, serverTimestamp, s
 import { useUser } from "@/hooks/useUser";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
-import { ClipboardIcon, ChatBubbleLeftRightIcon } from "@heroicons/react/24/solid";
+import { ClipboardIcon, ChatBubbleLeftRightIcon, PencilIcon } from "@heroicons/react/24/solid";
 import QRCode from "react-qr-code";
 import copy from "copy-to-clipboard";
 
@@ -17,6 +19,7 @@ interface Inquiry {
   content?: string;
   createdAt?: any;
   alert?: boolean;
+  summary?: Record<string, string>;
 }
 
 export default function SellerDashboard() {
@@ -26,6 +29,7 @@ export default function SellerDashboard() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [lastInquiryId, setLastInquiryId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -45,8 +49,22 @@ export default function SellerDashboard() {
         where("sellerId", "==", user.uid),
         orderBy("createdAt", "desc")
       ),
-      (snap) => {
-        const sorted = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Inquiry)).sort((a, b) => (b.alert ? 1 : 0) - (a.alert ? 1 : 0));
+      async (snap) => {
+        const enriched = await Promise.all(snap.docs.map(async docSnap => {
+          const data = docSnap.data();
+          const id = docSnap.id;
+          const inquiryRef = doc(db, "sellers", user.uid, "inquiries", id);
+          const summarySnap = await getDoc(inquiryRef);
+          const summaryData = summarySnap.exists() ? summarySnap.data().summary : undefined;
+          return { id, ...data, summary: summaryData } as Inquiry;
+        }));
+        if (enriched.length > 0 && enriched[0].id !== lastInquiryId) {
+          if (lastInquiryId !== null) {
+            toast.success("새로운 소비자 채팅이 도착했습니다");
+          }
+          setLastInquiryId(enriched[0].id);
+        }
+        const sorted = enriched.sort((a, b) => (b.alert ? 1 : 0) - (a.alert ? 1 : 0));
         setInquiries(sorted.slice(0, 10));
       }
     );
@@ -60,7 +78,7 @@ export default function SellerDashboard() {
       unsub();
       clearInterval(interval);
     };
-  }, [user]);
+  }, [user, lastInquiryId]);
 
   const handleCopy = () => {
     copy(`https://seil.ai.kr/chat-summary/${user?.uid}`);
@@ -100,28 +118,6 @@ export default function SellerDashboard() {
         </div>
       </div>
 
-      <div className="bg-white border rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div className="text-gray-700 font-medium">📎 나의 상담 링크</div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-          <span className="text-sm text-gray-500 break-all">{linkUrl}</span>
-          <button onClick={handleCopy} className="flex items-center gap-1 px-3 py-1 border rounded hover:bg-gray-100">
-            <ClipboardIcon className="w-4 h-4" /> 복사
-          </button>
-          <button onClick={() => setShowQR(!showQR)} className="text-sm text-blue-600 underline">QR 보기</button>
-          {copied && <span className="text-green-600 text-sm">복사됨!</span>}
-        </div>
-        {showQR && (
-          <div className="pt-2">
-            <QRCode value={linkUrl} size={128} />
-            <div className="flex gap-2 mt-2">
-              <a href={snsLinks.twitter} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 underline">트위터</a>
-              <a href={snsLinks.facebook} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 underline">페이스북</a>
-              <a href={snsLinks.kakao} target="_blank" rel="noopener noreferrer" className="text-sm text-yellow-600 underline">카카오</a>
-            </div>
-          </div>
-        )}
-      </div>
-
       <div className="bg-white border rounded-lg p-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2">
           <h2 className="font-semibold">📩 최근 문의</h2>
@@ -129,14 +125,26 @@ export default function SellerDashboard() {
             <ChatBubbleLeftRightIcon className="w-4 h-4" /> 요약 보기
           </Link>
         </div>
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {inquiries.map(inq => (
-            <li key={inq.id} className={`p-3 rounded border ${inq.alert ? 'bg-yellow-50 border-yellow-300' : 'bg-gray-50 border-gray-200'}`}>
+            <li key={inq.id} className={`p-4 rounded-xl border shadow-sm transition hover:shadow-md ${inq.alert ? 'bg-yellow-50 border-yellow-300' : 'bg-gray-50 border-gray-200'}`}>
               <Link href={`/seller-live-chat?id=${inq.id}`} className="block">
-                <div className="text-sm font-medium">{inq.name || "이름 없음"} - {inq.phone}</div>
-                <div className="text-xs text-gray-500">{inq.content?.slice(0, 30)}...</div>
+                <div className="text-sm font-semibold text-gray-800">{inq.name || "이름 없음"} - {inq.phone}</div>
+                <div className="text-sm text-gray-600">{inq.content?.slice(0, 40)}...</div>
+                {inq.summary && (
+                  <div className="text-xs text-green-600 mt-2">
+                    {Object.entries(inq.summary).slice(0, 2).map(([key, val]) => `${key}: ${val}`).join(" | ")}
+                  </div>
+                )}
                 <div className="text-xs text-gray-400 mt-1">{inq.createdAt?.toDate?.().toLocaleString?.() || "시간 없음"}</div>
               </Link>
+              {inq.summary && (
+                <div className="mt-2 text-right">
+                  <Link href={`/seller-logs/${inq.id}/summary/edit`} className="inline-flex items-center text-xs text-blue-600 hover:underline">
+                    <PencilIcon className="w-4 h-4 mr-1" /> 요약 자세히 보기
+                  </Link>
+                </div>
+              )}
             </li>
           ))}
         </ul>
