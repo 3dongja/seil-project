@@ -19,8 +19,8 @@ export default function SummaryResultModal({
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex flex-col items-center justify-center gap-10 p-4 overflow-y-auto">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="fixed inset-0 z-50 bg-black/70 flex flex-col items-center justify-center gap-6 p-4 overflow-y-auto">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <button
           onClick={() => {
             router.push(`/chat/${localStorage.getItem("sellerId")}/${localStorage.getItem("inquiryId")}`);
