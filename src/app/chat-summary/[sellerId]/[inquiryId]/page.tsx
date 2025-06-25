@@ -1,12 +1,17 @@
 import ChatScreen from "@/components/chat/ChatScreen";
+import { notFound } from "next/navigation";
 
-export default function Page({ params }: { params: { sellerId: string; inquiryId: string } }) {
+export default async function Page({ params }: any) {
+  const { sellerId, inquiryId } = params || {};
+
+  if (!sellerId || !inquiryId) return notFound();
+
   return (
     <ChatScreen
-      sellerId={params.sellerId}
-      inquiryId={params.inquiryId}
+      sellerId={sellerId}
+      inquiryId={inquiryId}
       userType="consumer"
-      useApiSummary={false} // 🔴 요약 사용하지 않음: 실시간 라이브챗 전용
+      useApiSummary={true}
     />
   );
 }
