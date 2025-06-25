@@ -1,22 +1,58 @@
+// /src/app/chat-summary/[sellerId]/[inquiryId]/summary/page.tsx
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import CategoryForm from "@/components/chat/CategoryForm";
 import { defaultForms } from "@/constants/defaultForms";
 
 export default function SummaryPage() {
   const { sellerId, inquiryId } = useParams() as { sellerId: string; inquiryId: string };
   const router = useRouter();
+
   const [category, setCategory] = useState("상담");
   const [categoryData, setCategoryData] = useState<Record<string, string>>({});
   const [valid, setValid] = useState(true);
+  const [questionForms, setQuestionForms] = useState<any>(defaultForms);
+
+  useEffect(() => {
+    const fetchForms = async () => {
+      const settingDoc = doc(db, "sellers", sellerId, "settings", "chatbot");
+      const settingSnap = await getDoc(settingDoc);
+      const formData = settingSnap.data();
+      if (formData?.questionForms) {
+        setQuestionForms(formData.questionForms);
+      }
+    };
+    fetchForms();
+  }, [sellerId]);
 
   const handleSubmit = async () => {
     const inquiryRef = doc(db, "sellers", sellerId, "inquiries", inquiryId);
-    await setDoc(inquiryRef, { details: categoryData, category }, { merge: true });
+
+    const messages = [
+      { role: "user", content: `카테고리: ${category}` },
+      ...Object.entries(categoryData).filter(([_, v]) => v.trim()).map(
+        ([k, v]) => ({ role: "user", content: `${k}: ${v}` })
+      )
+    ];
+
+    let summary = "";
+    try {
+      const res = await fetch("/api/summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sellerId, inquiryId, category, details: categoryData, messages })
+      });
+      const data = await res.json();
+      summary = data.summary || "";
+    } catch (e) {
+      console.error("요약 생성 실패:", e);
+    }
+
+    await setDoc(inquiryRef, { details: categoryData, category, summary }, { merge: true });
     router.push("/complete");
   };
 
@@ -32,7 +68,7 @@ export default function SummaryPage() {
         onChange={e => setCategory(e.target.value)}
         className="w-full p-2 border rounded"
       >
-        {Object.keys(defaultForms).map(key => (
+        {Object.keys(questionForms).map(key => (
           <option key={key} value={key}>{key}</option>
         ))}
       </select>
@@ -42,7 +78,7 @@ export default function SummaryPage() {
         onChange={setCategoryData}
         onValidate={setValid}
         defaultData={{}}
-        forms={defaultForms}
+        forms={questionForms}
       />
 
       <button
