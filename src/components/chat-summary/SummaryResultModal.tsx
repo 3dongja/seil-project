@@ -45,6 +45,32 @@ export default function SummaryResultModal({
               alert("요약을 먼저 저장해주세요.");
               return;
             }
+            router.push(`/chat-summary/${sellerId}/${inquiryId}/summary`);
+            onSelect("log");
+          }}
+          className="bg-white rounded-2xl shadow-lg p-6 w-72 h-80 flex flex-col items-center justify-between hover:ring-2 ring-gray-400"
+        >
+          <Image
+            src="/happy.GIF"
+            alt="정보 저장"
+            width={120}
+            height={120}
+            className="object-contain"
+          />
+          <div className="text-center">
+            <h2 className="text-xl font-bold mb-2">정보사항 저장하기</h2>
+            <p className="text-sm text-gray-600">
+              사업주의 질문에 답만 적어주세요. 입력한 내용은 요약되어 상담에 활용되며 바로 전달 후 연락을 드립니다.
+            </p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => {
+            if (!sellerId || !inquiryId) {
+              alert("요약을 먼저 저장해주세요.");
+              return;
+            }
             router.push(`/chat/${sellerId}/${inquiryId}`);
             onSelect("chat");
           }}
@@ -115,27 +141,6 @@ export default function SummaryResultModal({
           </button>
         )}
       </div>
-
-      <button
-        onClick={() => {
-          if (!sellerId || !inquiryId) {
-            alert("요약을 먼저 저장해주세요.");
-            return;
-          }
-          router.push(`/chat-summary/${sellerId}/${inquiryId}/summary`);
-          onSelect("log");
-        }}
-        className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md flex flex-col items-center justify-center hover:ring-2 ring-gray-400"
-      >
-        <Image
-          src="/happy.GIF"
-          alt="정보 저장"
-          width={120}
-          height={120}
-          className="object-contain mb-4"
-        />
-        <span className="text-xl font-bold">정보사항 저장하기</span>
-      </button>
     </div>
   );
 }
