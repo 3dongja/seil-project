@@ -42,12 +42,12 @@ export default function SummaryResultModal({
         {/* 챗봇 자동응답 버튼 */}
         {(plan === "basic" || plan === "premium") && (
           <button
-            onClick={() => {
+            onClick={async () => {
               if (!sellerId || !inquiryId) {
                 alert("요약을 먼저 저장해주세요.");
                 return;
               }
-              router.push(`/chat-summary/${sellerId}/${inquiryId}/bot`);
+              await router.push(`/chat-summary/${sellerId}/${inquiryId}/bot`);
               onSelect("bot");
             }}
             className="bg-white rounded-2xl shadow-lg p-6 w-72 h-80 flex flex-col items-center justify-between hover:ring-2 ring-green-400"
@@ -92,12 +92,12 @@ export default function SummaryResultModal({
 
         {/* 상담원 1:1 신청 버튼 */}
         <button
-          onClick={() => {
+          onClick={async () => {
             if (!sellerId || !inquiryId) {
               alert("요약을 먼저 저장해주세요.");
               return;
             }
-            router.push(`/chat/${sellerId}/${inquiryId}`);
+            await router.push(`/chat/${sellerId}/${inquiryId}`);
             onSelect("chat");
           }}
           className="bg-white rounded-2xl shadow-lg p-6 w-72 h-80 flex flex-col items-center justify-between hover:ring-2 ring-blue-400"
@@ -119,12 +119,12 @@ export default function SummaryResultModal({
 
         {/* 정보사항 저장하기 버튼 */}
         <button
-          onClick={() => {
+          onClick={async () => {
             if (!sellerId || !inquiryId) {
               alert("요약을 먼저 저장해주세요.");
               return;
             }
-            router.push(`/chat-summary/${sellerId}/${inquiryId}/summary`);
+            await router.push(`/chat-summary/${sellerId}/${inquiryId}/summary`);
             onSelect("log");
           }}
           className="bg-white rounded-2xl shadow-lg p-6 w-72 h-80 flex flex-col items-center justify-between hover:ring-2 ring-gray-400"
