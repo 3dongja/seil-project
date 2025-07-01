@@ -24,6 +24,17 @@ export default function SummaryResultModal({
   }, []);
 
   useEffect(() => {
+    if (!sellerId || !inquiryId) return;
+    const inquiryRef = doc(db, "sellers", sellerId, "inquiries", inquiryId);
+    getDoc(inquiryRef).then((snap) => {
+      if (!snap.exists()) {
+        alert("요약 정보가 존재하지 않아 처음 화면으로 이동합니다.");
+        router.replace(`/chat-summary/${sellerId}`);
+      }
+    });
+  }, [sellerId, inquiryId]);
+
+  useEffect(() => {
     if (!sellerId) return;
     const ref = doc(db, "sellers", sellerId);
     getDoc(ref).then((snap) => {
@@ -44,6 +55,12 @@ export default function SummaryResultModal({
           <button
             onClick={async () => {
               if (!sellerId || !inquiryId) {
+                alert("요약을 먼저 저장해주세요.");
+                return;
+              }
+              const inquiryRef = doc(db, "sellers", sellerId, "inquiries", inquiryId);
+              const inquirySnap = await getDoc(inquiryRef);
+              if (!inquirySnap.exists()) {
                 alert("요약을 먼저 저장해주세요.");
                 return;
               }
@@ -97,6 +114,12 @@ export default function SummaryResultModal({
               alert("요약을 먼저 저장해주세요.");
               return;
             }
+            const inquiryRef = doc(db, "sellers", sellerId, "inquiries", inquiryId);
+            const inquirySnap = await getDoc(inquiryRef);
+            if (!inquirySnap.exists()) {
+              alert("요약을 먼저 저장해주세요.");
+              return;
+            }
             await router.push(`/chat/${sellerId}/${inquiryId}`);
             onSelect("chat");
           }}
@@ -121,6 +144,12 @@ export default function SummaryResultModal({
         <button
           onClick={async () => {
             if (!sellerId || !inquiryId) {
+              alert("요약을 먼저 저장해주세요.");
+              return;
+            }
+            const inquiryRef = doc(db, "sellers", sellerId, "inquiries", inquiryId);
+            const inquirySnap = await getDoc(inquiryRef);
+            if (!inquirySnap.exists()) {
               alert("요약을 먼저 저장해주세요.");
               return;
             }
