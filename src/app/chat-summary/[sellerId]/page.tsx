@@ -154,9 +154,10 @@ const ChatSummaryPage = () => {
       </div>
 
       {showModal && lastInquiryId && (
-        <SummaryResultModal
-          plan="free"
-          onSelect={() => setShowModal(false)}
+      <SummaryResultModal
+        sellerId={sellerId}
+        inquiryId={lastInquiryId}
+        onSelect={() => setShowModal(false)}
         />
       )}
     </main>

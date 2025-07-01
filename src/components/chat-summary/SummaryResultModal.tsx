@@ -1,15 +1,20 @@
 import Image from "next/image";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function SummaryResultModal({
-  plan,
+  sellerId,
+  inquiryId,
   onSelect,
 }: {
-  plan: "free" | "basic" | "premium";
+  sellerId: string;
+  inquiryId: string;
   onSelect: (option: "chat" | "bot" | "log") => void;
 }) {
   const router = useRouter();
+  const [plan, setPlan] = useState<"free" | "basic" | "premium">("free");
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -18,12 +23,29 @@ export default function SummaryResultModal({
     };
   }, []);
 
+  useEffect(() => {
+    if (!sellerId) return;
+    const ref = doc(db, "sellers", sellerId);
+    getDoc(ref).then((snap) => {
+      const data = snap.data();
+      if (data?.plan === "basic" || data?.plan === "premium") {
+        setPlan(data.plan);
+      } else {
+        setPlan("free");
+      }
+    });
+  }, [sellerId]);
+
   return (
     <div className="fixed inset-0 z-50 bg-black/70 flex flex-col items-center justify-center gap-6 p-4 overflow-y-auto">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <button
           onClick={() => {
-            router.push(`/chat/${localStorage.getItem("sellerId")}/${localStorage.getItem("inquiryId")}`);
+            if (!sellerId || !inquiryId) {
+              alert("요약을 먼저 저장해주세요.");
+              return;
+            }
+            router.push(`/chat/${sellerId}/${inquiryId}`);
             onSelect("chat");
           }}
           className="bg-white rounded-2xl shadow-lg p-6 w-72 h-80 flex flex-col items-center justify-between hover:ring-2 ring-blue-400"
@@ -46,7 +68,11 @@ export default function SummaryResultModal({
         {(plan === "basic" || plan === "premium") && (
           <button
             onClick={() => {
-              router.push(`/chat-summary/${localStorage.getItem("sellerId")}/${localStorage.getItem("inquiryId")}/bot`);
+              if (!sellerId || !inquiryId) {
+                alert("요약을 먼저 저장해주세요.");
+                return;
+              }
+              router.push(`/chat-summary/${sellerId}/${inquiryId}/bot`);
               onSelect("bot");
             }}
             className="bg-white rounded-2xl shadow-lg p-6 w-72 h-80 flex flex-col items-center justify-between hover:ring-2 ring-green-400"
@@ -92,7 +118,11 @@ export default function SummaryResultModal({
 
       <button
         onClick={() => {
-          router.push(`/chat-summary/${localStorage.getItem("sellerId")}/${localStorage.getItem("inquiryId")}/summary`);
+          if (!sellerId || !inquiryId) {
+            alert("요약을 먼저 저장해주세요.");
+            return;
+          }
+          router.push(`/chat-summary/${sellerId}/${inquiryId}/summary`);
           onSelect("log");
         }}
         className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md flex flex-col items-center justify-center hover:ring-2 ring-gray-400"
