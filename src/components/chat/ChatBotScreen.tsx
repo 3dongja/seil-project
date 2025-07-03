@@ -32,6 +32,18 @@ const ChatBotScreen = ({ sellerId, inquiryId }: Props) => {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const checkInquiry = async () => {
+      const ref = doc(db, "sellers", sellerId, "inquiries", inquiryId);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        alert("문의 정보가 유효하지 않습니다. 처음 화면으로 이동합니다.");
+        router.replace(`/chat-summary/${sellerId}`);
+      }
+    };
+    checkInquiry();
+  }, [sellerId, inquiryId]);
+
+  useEffect(() => {
     const checkPlan = async () => {
       const sellerRef = doc(db, "sellers", sellerId);
       const snap = await getDoc(sellerRef);

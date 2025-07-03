@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase";
 import KakaoChatInputBar from "./KakaoChatInputBar";
 import CategoryForm from "./CategoryForm";
 import { getSummaryFromAnswers } from "@/lib/summary";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 
 function formatTime(timestamp: any) {
   if (!timestamp) return "";
@@ -86,7 +86,20 @@ export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm =
   const [lastSummaryInput, setLastSummaryInput] = useState<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
+  const router = useRouter();
   const resolvedCategory = category ?? searchParams.get("category") ?? "문의";
+
+  useEffect(() => {
+    const validate = async () => {
+      const ref = doc(db, "sellers", sellerId, "inquiries", inquiryId);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        alert("문의 정보가 유효하지 않습니다. 처음 화면으로 이동합니다.");
+        router.replace(`/chat-summary/${sellerId}`);
+      }
+    };
+    validate();
+  }, [sellerId, inquiryId]);
 
   useEffect(() => {
     const q = query(

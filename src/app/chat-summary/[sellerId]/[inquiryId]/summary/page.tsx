@@ -18,6 +18,19 @@ export default function SummaryPage() {
   const [questionForms, setQuestionForms] = useState<any>(defaultForms);
 
   useEffect(() => {
+    const validateInquiry = async () => {
+      if (!sellerId || !inquiryId) return;
+      const ref = doc(db, "sellers", sellerId, "inquiries", inquiryId);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        alert("문의 정보가 존재하지 않습니다. 메인 화면으로 이동합니다.");
+        router.replace(`/chat-summary/${sellerId}`);
+      }
+    };
+    validateInquiry();
+  }, [sellerId, inquiryId]);
+
+  useEffect(() => {
     const fetchForms = async () => {
       const settingDoc = doc(db, "sellers", sellerId, "settings", "chatbot");
       const settingSnap = await getDoc(settingDoc);
