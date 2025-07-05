@@ -11,7 +11,12 @@ import useUserRoles from "@/hooks/useUserRoles";
 import ChatMessageList from "@/components/chat/ChatMessageList";
 import KakaoChatInputBar from "@/components/chat/KakaoChatInputBar";
 
-export default function ChatBotScreen() {
+interface ChatBotScreenProps {
+  sellerId?: string;
+  inquiryId?: string;
+}
+
+export default function ChatBotScreen(props: ChatBotScreenProps) {
   const { user: currentUser } = useAuth();
   const { user } = useUserRoles();
   const [input, setInput] = useState("");
@@ -19,8 +24,11 @@ export default function ChatBotScreen() {
   const [botActive, setBotActive] = useState(true);
   const searchParams = useSearchParams();
   const router = useRouter();
-  const inquiryId = searchParams.get("inquiryId");
-  const dummy = useRef<HTMLDivElement>(null!); // null 허용 제거
+
+  const inquiryId = props.inquiryId ?? searchParams.get("inquiryId");
+  const sellerId = props.sellerId ?? currentUser?.uid;
+
+  const dummy = useRef<HTMLDivElement>(null!);
 
   const messagesRef = collection(db, "chats", inquiryId!, "messages");
   const q = query(messagesRef, orderBy("createdAt"));
@@ -28,25 +36,25 @@ export default function ChatBotScreen() {
   useAutoScroll(messagesSnapshot, dummy);
 
   useEffect(() => {
-    if (!inquiryId || !currentUser?.uid) return;
-    const inquiryRef = doc(db, "sellers", currentUser.uid, "inquiries", inquiryId);
+    if (!inquiryId || !sellerId) return;
+    const inquiryRef = doc(db, "sellers", sellerId, "inquiries", inquiryId);
     const unsubscribe = onSnapshot(inquiryRef, (docSnap) => {
       if (docSnap.exists() && docSnap.data()?.sellerActive) {
-        setBotActive(false); // 챗봇 비활성화
+        setBotActive(false);
       }
     });
     return () => unsubscribe();
-  }, [inquiryId, currentUser]);
+  }, [inquiryId, sellerId]);
 
   const handleSend = async (message: string) => {
-    if (!message.trim() || !inquiryId || !currentUser || !botActive) return;
+    if (!message.trim() || !inquiryId || !sellerId || !botActive) return;
 
-    const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+    const userSnap = await getDoc(doc(db, "users", sellerId));
     if (userSnap.exists() && userSnap.data()?.role === "seller") return;
 
     const userMessage = {
       text: message,
-      senderId: currentUser.uid,
+      senderId: sellerId,
       senderType: "user",
       createdAt: serverTimestamp(),
     };
@@ -87,13 +95,13 @@ export default function ChatBotScreen() {
         <ChatMessageList
           messages={messagesSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() }))}
           userType={(user as any)?.role ?? "consumer"}
-          sellerId={currentUser?.uid ?? ""}
+          sellerId={sellerId ?? ""}
           inquiryId={inquiryId ?? ""}
         />
         <div ref={dummy} />
       </div>
       <KakaoChatInputBar
-        sellerId={currentUser?.uid ?? ""}
+        sellerId={sellerId ?? ""}
         inquiryId={inquiryId ?? ""}
         userType={(user as any)?.role ?? "consumer"}
         disabled={loading || !botActive}
