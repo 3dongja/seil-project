@@ -1,99 +1,106 @@
+// /src/app/chat-summary/[sellerId]/[inquiryId]/summary/page.tsx
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import Image from "next/image";
-import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import CategoryForm from "@/components/chat/CategoryForm";
+import { defaultForms } from "@/constants/defaultForms";
 
-interface Props {
-  sellerId: string;
-  inquiryId: string;
-  onSelect: (mode: "chat" | "summary" | "bot") => void;
-}
-
-export default function SummaryResultModal({ sellerId, inquiryId, onSelect }: Props) {
+export default function SummaryPage() {
+  const { sellerId, inquiryId } = useParams() as { sellerId: string; inquiryId: string };
   const router = useRouter();
-  const [plan, setPlan] = useState("free");
+
+  const [category, setCategory] = useState("상담");
+  const [categoryData, setCategoryData] = useState<Record<string, string>>({});
+  const [valid, setValid] = useState(true);
+  const [questionForms, setQuestionForms] = useState<any>(defaultForms);
 
   useEffect(() => {
-    const fetchPlan = async () => {
-      if (!sellerId) return;
-      const planRef = doc(db, "plans", sellerId);
-      const planSnap = await getDoc(planRef);
-      if (planSnap.exists()) {
-        const data = planSnap.data();
-        setPlan(data.tier || "free");
+    const validateInquiry = async () => {
+      if (!sellerId || !inquiryId) return;
+      const ref = doc(db, "sellers", sellerId, "inquiries", inquiryId);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        alert("문의 정보가 존재하지 않습니다. 메인 화면으로 이동합니다.");
+        router.replace(`/chat-summary/${sellerId}`);
       }
     };
-    fetchPlan();
+    validateInquiry();
+  }, [sellerId, inquiryId]);
+
+  useEffect(() => {
+    const fetchForms = async () => {
+      const settingDoc = doc(db, "sellers", sellerId, "settings", "chatbot");
+      const settingSnap = await getDoc(settingDoc);
+      const formData = settingSnap.data();
+      if (formData?.questionForms) {
+        setQuestionForms(formData.questionForms);
+      }
+    };
+    fetchForms();
   }, [sellerId]);
 
-  const validateBeforePush = async (sellerId: string, inquiryId: string) => {
-    if (!sellerId || !inquiryId) {
-      alert("잘못된 접근입니다. 판매자 또는 문의 ID가 없습니다.");
-      return false;
-    }
-    const inquiryRef = doc(db, "inquiries", inquiryId);
-    const inquirySnap = await getDoc(inquiryRef);
-    if (!inquirySnap.exists()) {
-      alert("해당 문의 내역을 찾을 수 없습니다.");
-      return false;
-    }
-    return true;
-  };
+  const handleSubmit = async () => {
+    const inquiryRef = doc(db, "sellers", sellerId, "inquiries", inquiryId);
 
-  const handleClick = async (mode: "chat" | "summary" | "bot") => {
-    if (mode === "bot" && plan === "free") {
-      alert("챗봇 기능은 유료 요금제에서만 사용 가능합니다.");
-      return;
+    const messages = [
+      { role: "user", content: `카테고리: ${category}` },
+      ...Object.entries(categoryData).filter(([_, v]) => v.trim()).map(
+        ([k, v]) => ({ role: "user", content: `${k}: ${v}` })
+      )
+    ];
+
+    let summary = "";
+    try {
+      const res = await fetch("/api/summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sellerId, inquiryId, category, details: categoryData, messages })
+      });
+      const data = await res.json();
+      summary = data.summary || "";
+    } catch (e) {
+      console.error("요약 생성 실패:", e);
     }
-    const isValid = await validateBeforePush(sellerId, inquiryId);
-    if (!isValid) return;
-    await router.push(`/chat-summary/${sellerId}/${inquiryId}/${mode}`);
-    onSelect(mode);
+
+    await setDoc(inquiryRef, { details: categoryData, category, summary }, { merge: true });
+    router.push("/complete");
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
-      <div className="bg-white rounded-xl w-80 px-4 pt-6 pb-4 space-y-4">
-        <Option
-          title="정보사항 저장하기"
-          image="/bot-3.png"
-          description="내용을 저장하고 추후에 요약 검토나 후속 처리를 진행할 수 있습니다."
-          onClick={() => handleClick("summary")}
-        />
-        <Option
-          title="상담원 1:1 신청"
-          image="/bot-2.png"
-          description="대기 시간이 발생할 수 있습니다. 정확하게 정보를 남겨주시면 빠르게 답변 드리겠습니다."
-          onClick={() => handleClick("chat")}
-        />
-        <Option
-          title="챗봇 자동응답"
-          image="/bot-1.png"
-          description="바로 답변 가능하지만 AI 특성상 정확하지 않은 답변이 있을 수 있습니다. 정확하고 간단하게 넘겨주시면 빠르게 확인드리겠습니다."
-          onClick={() => handleClick("bot")}
-          disabled={plan === "free"}
-        />
-      </div>
-    </div>
-  );
-}
+    <main className="p-4 space-y-4 max-w-md mx-auto">
+      <h1 className="text-xl font-bold text-center">📝 문의 요약 작성</h1>
+      <p className="text-center text-sm text-gray-500 mb-2">
+        선택한 항목에 대해 정보를 입력해주세요.
+      </p>
 
-function Option({ title, image, description, onClick, disabled = false }: any) {
-  return (
-    <div
-      onClick={!disabled ? onClick : undefined}
-      className={`bg-white rounded-xl shadow-md overflow-hidden hover:ring-2 hover:ring-blue-500 cursor-pointer w-72 h-80 ${
-        disabled ? "opacity-50 cursor-not-allowed" : ""
-      }`}
-    >
-      <Image src={image} width={320} height={160} className="w-full object-cover h-40" alt={title} />
-      <div className="p-4 space-y-2">
-        <h3 className="font-bold text-lg text-center">{title}</h3>
-        <p className="text-gray-500 text-sm text-center whitespace-pre-line">{description}</p>
-      </div>
-    </div>
+      <select
+        value={category}
+        onChange={e => setCategory(e.target.value)}
+        className="w-full p-2 border rounded"
+      >
+        {Object.keys(questionForms).map(key => (
+          <option key={key} value={key}>{key}</option>
+        ))}
+      </select>
+
+      <CategoryForm
+        category={category}
+        onChange={setCategoryData}
+        onValidate={setValid}
+        defaultData={{}}
+        forms={questionForms}
+      />
+
+      <button
+        onClick={handleSubmit}
+        disabled={!valid}
+        className="w-full bg-blue-600 text-white py-2 rounded-md disabled:opacity-50"
+      >
+        저장 후 제출하기
+      </button>
+    </main>
   );
 }
