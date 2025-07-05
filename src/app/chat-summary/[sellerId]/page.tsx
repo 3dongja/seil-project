@@ -164,14 +164,17 @@ const ChatSummaryPage = () => {
           onSelect={(mode) => {
             setShowModal(false);
             if (!sellerId || !lastInquiryId) return;
-            switch (mode) {
+           const resolvedMode = (["chat", "summary", "bot"].includes(mode as string)
+              ? (mode as "chat" | "summary" | "bot")
+              : "summary");
+            switch (resolvedMode) {
               case "chat":
                 router.push(`/chat-summary/${sellerId}/${lastInquiryId}`);
                 break;
               case "bot":
                 router.push(`/chat-summary/${sellerId}/${lastInquiryId}/bot`);
                 break;
-              case "log":
+              case "summary":
                 router.push(`/chat-summary/${sellerId}/${lastInquiryId}/summary`);
                 break;
             }
