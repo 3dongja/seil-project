@@ -1,157 +1,111 @@
-// ✅ ChatBotScreen.tsx 수정본: router.replace → setTimeout 처리로 초기화 방지
-
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCollection } from "react-firebase-hooks/firestore";
+import { useAuth } from "@/AuthContext";
+import { useAutoScroll } from "@/useAutoScroll";
+import { doc, getDoc, serverTimestamp, collection, addDoc, updateDoc, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import {
-  collection,
-  addDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  serverTimestamp,
-  doc,
-  getDoc
-} from "firebase/firestore";
+import useUserRoles from "@/hooks/useUserRoles";
+import ChatMessageList from "@/components/chat/ChatMessageList";
 import KakaoChatInputBar from "@/components/chat/KakaoChatInputBar";
-import ChatBotWrapper from "@/components/chat/ChatBotWrapper";
 
-interface Props {
-  sellerId: string;
-  inquiryId: string;
-}
-
-const ChatBotScreen = ({ sellerId, inquiryId }: Props) => {
+export default function ChatBotScreen() {
+  const { user: currentUser } = useAuth();
+  const { user } = useUserRoles();
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [botActive, setBotActive] = useState(true);
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const [messages, setMessages] = useState<any[]>([]);
-  const [summary, setSummary] = useState<string>("");
-  const [category, setCategory] = useState<string>("");
-  const [details, setDetails] = useState<Record<string, string>>({});
-  const [sending, setSending] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const inquiryId = searchParams.get("inquiryId");
+  const dummy = useRef<HTMLDivElement>(null!); // null 허용 제거
+
+  const messagesRef = collection(db, "chats", inquiryId!, "messages");
+  const q = query(messagesRef, orderBy("createdAt"));
+  const [messagesSnapshot] = useCollection(q);
+  useAutoScroll(messagesSnapshot, dummy);
 
   useEffect(() => {
-    const checkInquiry = async () => {
-      try {
-        const ref = doc(db, "sellers", sellerId, "inquiries", inquiryId);
-        const snap = await getDoc(ref);
-        if (!snap.exists()) {
-          alert("문의 정보가 유효하지 않습니다. 처음 화면으로 이동합니다.");
-          setTimeout(() => router.replace(`/chat-summary/${sellerId}`), 100);
-        }
-      } catch (error) {
-        console.error("checkInquiry 오류:", error);
-      }
-    };
-    checkInquiry();
-  }, [sellerId, inquiryId]);
-
-  useEffect(() => {
-    const checkPlan = async () => {
-      try {
-        const sellerRef = doc(db, "sellers", sellerId);
-        const snap = await getDoc(sellerRef);
-        const plan = snap.data()?.plan || "free";
-        if (plan === "free") {
-          alert("무료 요금제는 챗봇 기능이 제한됩니다.");
-          setTimeout(() => router.replace(`/chat-summary/${sellerId}`), 100);
-        }
-      } catch (error) {
-        console.error("checkPlan 오류:", error);
-      }
-    };
-    checkPlan();
-  }, [sellerId]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const refDoc = doc(db, "sellers", sellerId, "inquiries", inquiryId);
-        const snap = await getDoc(refDoc);
-        const data = snap.data();
-        setSummary(data?.summary || "");
-        setCategory(data?.category || "");
-        setDetails(data?.details || {});
-      } catch (error) {
-        console.error("fetchData 오류:", error);
-      }
-    };
-    fetchData();
-  }, [sellerId, inquiryId]);
-
-  useEffect(() => {
-    const q = query(
-      collection(db, "sellers", sellerId, "inquiries", inquiryId, "messages"),
-      orderBy("createdAt")
-    );
-    const unsub = onSnapshot(q, (snap) => {
-      const list = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setMessages(list);
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-    });
-    return () => unsub();
-  }, [sellerId, inquiryId]);
-
-  useEffect(() => {
-    const watchSellerActive = onSnapshot(doc(db, "sellers", sellerId, "inquiries", inquiryId), (docSnap) => {
-      if (docSnap.data()?.sellerActive) {
-        alert("상담원이 채팅에 참여하여 챗봇이 종료됩니다.");
-        setTimeout(() => router.replace(`/chat-summary/${sellerId}`), 100);
+    if (!inquiryId || !currentUser?.uid) return;
+    const inquiryRef = doc(db, "sellers", currentUser.uid, "inquiries", inquiryId);
+    const unsubscribe = onSnapshot(inquiryRef, (docSnap) => {
+      if (docSnap.exists() && docSnap.data()?.sellerActive) {
+        setBotActive(false); // 챗봇 비활성화
       }
     });
-    return () => watchSellerActive();
-  }, [sellerId, inquiryId]);
+    return () => unsubscribe();
+  }, [inquiryId, currentUser]);
 
-  const handleSend = async (text: string) => {
-    if (!text.trim()) return;
-    const offTopic = !["주문", "예약", "상담", "문의", "반품", "교환"].some((k) => text.includes(k));
-    if (offTopic) {
-      await addDoc(collection(db, "sellers", sellerId, "inquiries", inquiryId, "messages"), {
-        sender: "bot",
-        text: "죄송합니다. 본 서비스와 관련된 질문만 응답드릴 수 있습니다.",
-        createdAt: serverTimestamp()
+  const handleSend = async (message: string) => {
+    if (!message.trim() || !inquiryId || !currentUser || !botActive) return;
+
+    const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+    if (userSnap.exists() && userSnap.data()?.role === "seller") return;
+
+    const userMessage = {
+      text: message,
+      senderId: currentUser.uid,
+      senderType: "user",
+      createdAt: serverTimestamp(),
+    };
+
+    await addDoc(messagesRef, userMessage);
+
+    const systemPrompt = `당신은 고객센터 AI 챗봇입니다.
+고객이 남긴 요약 내용 안에서만 응답하며, 판매자의 업종과 상품 정보를 참고합니다.
+항상 정중한 말투로 상담 목적에 집중하세요.
+
+- 상담사가 아닌 AI임을 명확히 하세요
+- 결제, 개인정보 요청은 금지입니다
+- 상담 외 질문(예: 농담, 잡담, 기능 테스트 등)은 “정확한 안내를 위해 담당자에게 전달하겠습니다”로 응답하세요
+- 모르는 내용은 상상하지 말고 “그 부분은 확인 후 안내드릴게요”로 마무리하세요`;
+
+    try {
+      const response = await fetch("/api/gpt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, systemPrompt }),
       });
-      return;
-    }
-
-    await addDoc(collection(db, "sellers", sellerId, "inquiries", inquiryId, "messages"), {
-      sender: "user",
-      text,
-      createdAt: serverTimestamp()
-    });
-
-    setSending(true);
-    const res = await fetch("/api/gpt", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sellerId, inquiryId, summary, category, details, text })
-    });
-    const data = await res.json();
-    setSending(false);
-
-    if (data.reply) {
-      await addDoc(collection(db, "sellers", sellerId, "inquiries", inquiryId, "messages"), {
-        sender: "bot",
+      const data = await response.json();
+      const botMessage = {
         text: data.reply,
-        createdAt: serverTimestamp()
-      });
+        senderId: "chatbot",
+        senderType: "bot",
+        createdAt: serverTimestamp(),
+      };
+      await addDoc(messagesRef, botMessage);
+    } catch (error) {
+      console.error("GPT 응답 실패", error);
     }
   };
 
   return (
-    <ChatBotWrapper messages={messages}>
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto px-4">
+        <ChatMessageList
+          messages={messagesSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() }))}
+          userType={(user as any)?.role ?? "consumer"}
+          sellerId={currentUser?.uid ?? ""}
+          inquiryId={inquiryId ?? ""}
+        />
+        <div ref={dummy} />
+      </div>
       <KakaoChatInputBar
-        sellerId={sellerId}
-        inquiryId={inquiryId}
-        userType="consumer"
-        disabled={sending}
-        onSend={handleSend}
+        sellerId={currentUser?.uid ?? ""}
+        inquiryId={inquiryId ?? ""}
+        userType={(user as any)?.role ?? "consumer"}
+        disabled={loading || !botActive}
+        onSend={async (msg: string) => {
+          setLoading(true);
+          try {
+            await handleSend(msg);
+          } finally {
+            setLoading(false);
+          }
+        }}
       />
-      <div ref={bottomRef} />
-    </ChatBotWrapper>
+    </div>
   );
-};
-
-export default ChatBotScreen;
+}

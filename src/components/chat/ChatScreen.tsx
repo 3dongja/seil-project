@@ -1,4 +1,4 @@
-// ✅ ChatScreen.tsx 수정본: 라우팅 타이밍 문제 해결
+// ✅ ChatScreen.tsx 수정본 + 요약 재생성 버튼 추가 (seller 전용)
 
 "use client";
 
@@ -167,9 +167,32 @@ export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm =
     fetchSummary();
   }, [answers, valid]);
 
+  const handleManualResummary = async () => {
+    if (!valid || Object.keys(answers).length === 0) {
+      alert("입력 정보가 없습니다.");
+      return;
+    }
+    try {
+      const settingsRef = doc(db, "sellers", sellerId, "settings", "chatbot");
+      const settingsSnap = await getDoc(settingsRef);
+      const systemPrompt = settingsSnap.exists() ? settingsSnap.data() : {};
+      const summary = await getSummaryFromAnswers(sellerId, resolvedCategory, answers, systemPrompt);
+      await setDoc(doc(db, "sellers", sellerId, "inquiries", inquiryId, "summary", "auto"), {
+        category: resolvedCategory,
+        answers,
+        summary,
+        updatedAt: new Date()
+      });
+      alert("요약이 재생성되었습니다.");
+    } catch (e) {
+      alert("요약 재생성 실패");
+      console.error(e);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col">
-      {summaryInfo?.name || summaryInfo?.phone ? (
+      {(summaryInfo?.name || summaryInfo?.phone) && (
         <div className="px-4 py-2 bg-gray-100 border-b text-sm text-gray-800">
           {summaryInfo.name && <div>이름: {summaryInfo.name}</div>}
           {summaryInfo.phone && (
@@ -185,15 +208,24 @@ export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm =
               전화번호: {summaryInfo.phone}
             </div>
           )}
+          {/* ✅ 요약 재생성 버튼 (seller만 노출) */}
+          {userType === "seller" && (
+            <button onClick={handleManualResummary} className="text-xs mt-1 text-green-600 underline">
+              🔄 GPT 요약 재생성
+            </button>
+          )}
         </div>
-      ) : null}
+      )}
+
       <div className="p-4">
         <CategoryForm category={resolvedCategory} onChange={setAnswers} onValidate={setValid} />
       </div>
+
       <div className="flex-1 overflow-auto px-4 space-y-4 pb-32">
         <ChatMessageList messages={filteredMessages} userType={userType} sellerId={sellerId} inquiryId={inquiryId} />
         <div ref={scrollRef} className="h-1"></div>
       </div>
+
       <div className="fixed bottom-0 left-0 w-full z-20 bg-white border-t">
         <KakaoChatInputBar sellerId={sellerId} inquiryId={inquiryId} userType={userType} />
       </div>

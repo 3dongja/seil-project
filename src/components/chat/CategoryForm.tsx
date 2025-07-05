@@ -63,7 +63,11 @@ const CategoryForm = ({ category, onChange, onValidate, defaultData = {}, forms 
             type="text"
             placeholder={q.placeholder || "답변을 입력하세요"}
             value={answers[q.key] || ""}
-            onChange={(e) => setAnswers({ ...answers, [q.key]: e.target.value })}
+            onChange={(e) => {
+              const updated = { ...answers, [q.key]: e.target.value };
+              setAnswers(updated);
+              onChange(updated);
+            }}
             disabled={readOnly}
             className="w-full border border-gray-300 p-2 rounded-md text-sm"
           />

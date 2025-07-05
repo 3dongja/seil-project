@@ -1,4 +1,4 @@
-// ✅ src/app/chat-summary/[sellerId]/[inquiryId]/summary/complete.tsx
+// ✅ src/app/chat-summary/[sellerId]/[inquiryId]/summary/complete.tsx (보안 강화 + 중복 방지)
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/Button";
 import { ArrowLeft } from "lucide-react";
 import { buildPrompt, generateSummary } from "@/lib/gpt/prompt";
+import { getAuth } from "firebase/auth";
 
 const SummaryCompletePage = () => {
   const params = useParams();
@@ -20,23 +21,38 @@ const SummaryCompletePage = () => {
     const fetchAccess = async () => {
       try {
         if (!sellerId || !inquiryId) return;
-        const ref = doc(db, "sellers", sellerId, "inquiries", inquiryId);
-        const snap = await getDoc(ref);
-        if (!snap.exists()) {
+
+        const auth = getAuth();
+        const user = auth.currentUser;
+        if (!user || user.uid !== sellerId) {
+          console.warn("비인가 사용자 접근 차단");
+          router.replace(`/chat-summary/${sellerId}`);
+          return;
+        }
+
+        const inquiryRef = doc(db, "sellers", sellerId, "inquiries", inquiryId);
+        const inquirySnap = await getDoc(inquiryRef);
+        if (!inquirySnap.exists()) {
           alert("접근 권한이 없습니다. 메인 화면으로 이동합니다.");
           router.replace(`/chat-summary/${sellerId}`);
           return;
         }
-        const data = snap.data();
+        const data = inquirySnap.data();
         if (!data?.name || !data?.phone || !data?.details) {
           alert("사용자 정보가 누락되어 있습니다.");
           router.replace(`/chat-summary/${sellerId}`);
           return;
         }
 
-        // GPT 요약 호출
-        const prompt = buildPrompt({ name: data.name, phone: data.phone, details: data.details });
-        await generateSummary(prompt);
+        // 요약 문서 존재 여부 확인 → 없을 때만 생성
+        const summaryRef = doc(db, "sellers", sellerId, "inquiries", inquiryId, "summary", "auto");
+        const summarySnap = await getDoc(summaryRef);
+        if (!summarySnap.exists()) {
+          const prompt = buildPrompt({ name: data.name, phone: data.phone, details: data.details });
+          await generateSummary(prompt);
+        } else {
+          console.log("이미 요약이 생성되어 있음. 재생성 생략");
+        }
 
         const planSnap = await getDoc(doc(db, "sellers", sellerId, "settings", "chatbot"));
         const planData = planSnap.data();

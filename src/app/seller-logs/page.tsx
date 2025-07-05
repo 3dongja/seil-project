@@ -1,4 +1,5 @@
-// src/app/seller-logs/page.tsx
+// ✅ seller-logs/page.tsx: ✏️ 수정 버튼 제거 (소비자 정보는 수정 불가)
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -11,6 +12,7 @@ import {
   query,
   doc,
   deleteDoc,
+  getDoc,
 } from "firebase/firestore";
 import { ref, deleteObject } from "firebase/storage";
 import useUserRoles from "@/hooks/useUserRoles";
@@ -38,11 +40,15 @@ export default function SellerLogsPage() {
         collection(db, "sellers", user.uid, "inquiries"),
         orderBy("createdAt", "desc")
       );
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Inquiry[];
+      const unsubscribe = onSnapshot(q, async (snapshot) => {
+        const items: Inquiry[] = [];
+        for (const docSnap of snapshot.docs) {
+          const base = { id: docSnap.id, ...docSnap.data() } as Inquiry;
+          const summaryRef = doc(db, "sellers", user.uid, "inquiries", docSnap.id, "summary", "auto");
+          const summarySnap = await getDoc(summaryRef);
+          const autoSummary = summarySnap.exists() ? summarySnap.data().summary : null;
+          items.push({ ...base, summary: autoSummary || base.summary });
+        }
         setLogs(items);
       });
       return () => unsubscribe();
@@ -85,34 +91,15 @@ export default function SellerLogsPage() {
             className="relative rounded-xl shadow-md bg-white hover:bg-gray-50 overflow-hidden"
           >
             <div className="flex items-start p-4">
-              <div
-                className="flex-1 cursor-pointer"
-                onClick={() =>
-                  router.push(`/chat-summary/${user!.uid}/${log.id}/summary`)
-                }
-              >
+              <div className="flex-1">
                 <div className="flex justify-between items-center">
                   <p className="text-sm text-gray-500">{formatTime(log.createdAt)}</p>
-                  <div className="space-x-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/seller-logs/${log.id}/summary/edit`);
-                      }}
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      ✏️ 수정
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(log);
-                      }}
-                      className="text-sm text-red-500 hover:underline"
-                    >
-                      삭제
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => handleDelete(log)}
+                    className="text-sm text-red-500 hover:underline"
+                  >
+                    삭제
+                  </button>
                 </div>
                 <p className="text-base font-semibold text-gray-900">
                   {log.name} / {log.phone}
@@ -122,8 +109,18 @@ export default function SellerLogsPage() {
                 </p>
                 {log.summary && (
                   <p className="text-sm text-gray-600 italic mt-1">
-                    📝 {log.summary.slice(0, 80)}...
+                    🧠 GPT 요약: {log.summary.slice(0, 80)}...
                   </p>
+                )}
+                {log.details && (
+                  <div className="text-sm text-gray-700 mt-2">
+                    <p className="font-semibold">📝 소비자 입력 요약:</p>
+                    <ul className="list-disc list-inside text-gray-600">
+                      {Object.entries(log.details).map(([k, v]) => (
+                        <li key={k}>{k}: {v}</li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
                 {log.fileUrl && (
                   <p className="text-sm text-blue-600 underline mt-1">
