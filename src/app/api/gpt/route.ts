@@ -2,10 +2,7 @@
 import { NextRequest } from "next/server";
 import OpenAI from "openai";
 import { generatePrompt } from "@/lib/prompt-engine";
-import { config } from "dotenv";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
-
-config();
 
 export async function POST(req: NextRequest) {
   try {
