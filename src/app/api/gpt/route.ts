@@ -1,105 +1,71 @@
-import { NextRequest, NextResponse } from "next/server";
-import { adminDb as db, admin } from "@/lib/firebase-admin";
-import { OpenAI } from "openai";
+// src/app/api/gpt/route.ts
+import { NextRequest } from "next/server";
+import OpenAI from "openai";
+import { generatePrompt } from "@/lib/prompt-engine";
+import { config } from "dotenv";
+import { adminDb, adminAuth } from "@/lib/firebase-admin";
+
+config();
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    console.log("[API GPT] 수신된 요청 바디:", body);
-
-    const { sellerId, inquiryId, prompt, text, save = false } = body;
-    if (!sellerId || !prompt || !text || !inquiryId) {
-      return new NextResponse(
-        JSON.stringify({ error: "sellerId, inquiryId, prompt, text 중 누락된 값이 있습니다." }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
+    const { message, role, intent, model = "gpt-3.5-turbo", details } = await req.json();
+    if (!message || !role || !intent) {
+      return new Response("message, role, intent는 필수입니다", { status: 400 });
     }
 
-    const sellerRef = db.collection("sellers").doc(sellerId);
-    const sellerSnap = await sellerRef.get();
-    if (!sellerSnap.exists) {
-      return new NextResponse(
-        JSON.stringify({ error: "sellerId가 존재하지 않습니다." }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
-      );
+    // 인증 토큰 확인
+    const authHeader = req.headers.get("authorization");
+    const token = authHeader?.split("Bearer ")[1];
+    if (!token) {
+      return new Response("인증 토큰 없음", { status: 401 });
     }
 
-    const plan = sellerSnap.data()?.plan || "free";
-    if (plan === "free") {
-      return new NextResponse(
-        JSON.stringify({ error: "무료 요금제에서는 챗봇 사용이 제한됩니다." }),
-        { status: 403, headers: { "Content-Type": "application/json" } }
-      );
+    const decoded = await adminAuth.verifyIdToken(token);
+    const sellerId = decoded.uid;
+
+    // GPT API 키 선택 (gpt-4를 위한 구조도 미리 포함)
+    const apiKey = model.includes("gpt-4")
+      ? process.env.OPENAI_API_KEY_GPT40
+      : process.env.OPENAI_API_KEY_GPT35;
+
+    if (!apiKey) {
+      console.error("OpenAI API 키가 설정되지 않았습니다.");
+      return new Response("API 키 없음", { status: 500 });
     }
 
-    const openAiApiKey =
-      plan === "premium"
-        ? process.env.OPENAI_API_KEY_GPT40
-        : process.env.OPENAI_API_KEY_GPT35;
+    // 프롬프트 생성
+    const systemPrompt = await generatePrompt({ role, intent, sellerId });
 
-    const model = plan === "premium" ? "gpt-4" : "gpt-3.5-turbo";
-
-    if (!openAiApiKey) {
-      return new NextResponse(
-        JSON.stringify({ error: "OpenAI API 키가 설정되지 않았습니다." }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    const openai = new OpenAI({ apiKey: openAiApiKey });
-
-    let reply = "죄송합니다. 응답 생성에 실패했습니다.";
-
-    try {
-      const completion = await openai.chat.completions.create({
-        model,
-        messages: [
-          { role: "system", content: prompt },
-          { role: "user", content: text },
-        ],
-      });
-      reply = completion.choices[0].message?.content || reply;
-    } catch (error) {
-      console.error("[GPT 호출 실패]", error);
-      return new NextResponse(
-        JSON.stringify({ error: "GPT 호출 중 오류가 발생했습니다." }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    // Firestore 대화 저장 (기존 thread → inquiries로 수정)
-    if (save) {
-      const inquiryRef = db
-        .collection("sellers")
-        .doc(sellerId)
-        .collection("inquiries")
-        .doc(inquiryId)
-        .collection("messages");
-
-      await inquiryRef.add({
-        sender: "user",
-        content: text,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-      await inquiryRef.add({
-        sender: "bot",
-        content: reply,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-      console.log("[API GPT] 메시지 저장 완료 (inquiries)");
-    }
-
-    return new NextResponse(JSON.stringify({ reply }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
+    const openai = new OpenAI({ apiKey });
+    const completion = await openai.chat.completions.create({
+      model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: message },
+      ],
+      temperature: 0.7,
     });
-  } catch (error) {
-    console.error("[API GPT] 서버 처리 오류", error);
-    return new NextResponse(
-      JSON.stringify({ error: "서버 처리 중 오류가 발생했습니다." }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+
+    const content = completion.choices[0].message?.content?.trim() ?? "";
+
+    // 요청 로그 저장
+    await adminDb.collection("logs").add({
+      sellerId,
+      type: intent,
+      message,
+      reply: content,
+      details: details ?? null,
+      createdAt: Date.now(),
+    });
+
+    if (intent === "summary") {
+      return Response.json({ summary: content });
+    }
+
+    return Response.json({ reply: content });
+  } catch (e) {
+    console.error("GPT 처리 오류:", e);
+    return new Response("서버 오류", { status: 500 });
   }
 }
