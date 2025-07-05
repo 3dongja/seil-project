@@ -20,15 +20,14 @@ export type Props = {
 };
 
 const CategoryForm = ({ category, onChange, onValidate, defaultData = {}, forms = {}, readOnly = false }: Props) => {
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>(defaultData || {});
   const [questions, setQuestions] = useState<Question[]>([]);
 
   useEffect(() => {
-    setAnswers(defaultData);
-  }, [defaultData]);
-
-  useEffect(() => {
-    onChange(answers);
+    const filteredAnswers = Object.fromEntries(
+      Object.entries(answers).filter(([_, v]) => v.trim() !== "")
+    );
+    onChange(filteredAnswers);
   }, [answers, onChange]);
 
   useEffect(() => {
@@ -49,7 +48,7 @@ const CategoryForm = ({ category, onChange, onValidate, defaultData = {}, forms 
 
   useEffect(() => {
     if (onValidate && questions.length > 0) {
-      const valid = questions.every((q) => !q.required || answers[q.key]);
+      const valid = questions.every((q) => !q.required || answers[q.key]?.trim());
       onValidate(valid);
     }
   }, [answers, questions, onValidate]);
@@ -66,7 +65,6 @@ const CategoryForm = ({ category, onChange, onValidate, defaultData = {}, forms 
             onChange={(e) => {
               const updated = { ...answers, [q.key]: e.target.value };
               setAnswers(updated);
-              onChange(updated);
             }}
             disabled={readOnly}
             className="w-full border border-gray-300 p-2 rounded-md text-sm"
