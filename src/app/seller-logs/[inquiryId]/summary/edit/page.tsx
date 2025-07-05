@@ -20,9 +20,8 @@ export default function ChatSummaryEditPage() {
   const [valid, setValid] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
-
     const fetchInquiry = async () => {
+      if (!user) return;
       const refDoc = doc(db, "sellers", user.uid, "inquiries", inquiryId);
       const snap = await getDoc(refDoc);
       const data = snap.data();
@@ -30,6 +29,7 @@ export default function ChatSummaryEditPage() {
       if (data?.details) setCategoryData(data.details);
     };
     const fetchForms = async () => {
+      if (!user) return;
       const settingDoc = doc(db, "sellers", user.uid, "settings", "chatbot");
       const settingSnap = await getDoc(settingDoc);
       const formData = settingSnap.data();
