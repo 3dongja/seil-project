@@ -1,7 +1,7 @@
 // src/app/api/gpt/route.ts
 import { NextRequest } from "next/server";
 import OpenAI from "openai";
-import { generatePrompt } from "@/lib/prompt-engine/index";
+import generatePrompt from "@/lib/prompt-engine/index";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 
 export async function POST(req: NextRequest) {
