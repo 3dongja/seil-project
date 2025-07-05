@@ -24,8 +24,8 @@ export default function SummaryResultModal({
   }, []);
 
   useEffect(() => {
-    if (!sellerId || !inquiryId) return;
     const checkInquiry = async () => {
+      if (!sellerId || !inquiryId) return;
       try {
         const inquiryRef = doc(db, "sellers", sellerId, "inquiries", inquiryId);
         const snap = await getDoc(inquiryRef);
@@ -41,8 +41,8 @@ export default function SummaryResultModal({
   }, [sellerId, inquiryId]);
 
   useEffect(() => {
-    if (!sellerId) return;
     const fetchPlan = async () => {
+      if (!sellerId) return;
       try {
         const ref = doc(db, "sellers", sellerId);
         const snap = await getDoc(ref);
