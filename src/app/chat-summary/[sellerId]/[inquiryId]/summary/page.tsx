@@ -17,10 +17,9 @@ export default function SummaryPage() {
   const [questionForms, setQuestionForms] = useState<any>(defaultForms);
   const [loading, setLoading] = useState(true);
 
-  // ✅ useParams 초기값 가드
-  if (!sellerId || !inquiryId) return <div>잠시만 기다려주세요...</div>;
-
   useEffect(() => {
+    if (!sellerId || !inquiryId) return;
+
     const validateInquiry = async () => {
       const ref = doc(db, "sellers", sellerId, "inquiries", inquiryId);
       const snap = await getDoc(ref);
@@ -35,6 +34,8 @@ export default function SummaryPage() {
   }, [sellerId, inquiryId]);
 
   useEffect(() => {
+    if (!sellerId) return;
+
     const fetchForms = async () => {
       const settingDoc = doc(db, "sellers", sellerId, "settings", "chatbot");
       const settingSnap = await getDoc(settingDoc);
@@ -73,6 +74,7 @@ export default function SummaryPage() {
     router.push("/complete");
   };
 
+  if (!sellerId || !inquiryId) return <div>잠시만 기다려주세요...</div>;
   if (loading) return <div>문의 데이터를 불러오고 있습니다...</div>;
 
   return (
