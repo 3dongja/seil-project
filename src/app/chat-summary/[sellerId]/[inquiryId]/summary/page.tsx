@@ -1,4 +1,5 @@
-// /src/app/chat-summary/[sellerId]/[inquiryId]/summary/page.tsx
+// ✅ 1. summary/page.tsx 수정본: 라우팅 지연 처리로 초기화 방지
+
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
@@ -24,7 +25,7 @@ export default function SummaryPage() {
       const snap = await getDoc(ref);
       if (!snap.exists()) {
         alert("문의 정보가 존재하지 않습니다. 메인 화면으로 이동합니다.");
-        router.replace(`/chat-summary/${sellerId}`);
+        setTimeout(() => router.replace(`/chat-summary/${sellerId}`), 100);
       }
     };
     validateInquiry();

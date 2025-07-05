@@ -1,3 +1,5 @@
+// ✅ ChatBotScreen.tsx 수정본: router.replace → setTimeout 처리로 초기화 방지
+
 "use client";
 
 import { useEffect, useState, useRef } from "react";
@@ -37,7 +39,7 @@ const ChatBotScreen = ({ sellerId, inquiryId }: Props) => {
         const snap = await getDoc(ref);
         if (!snap.exists()) {
           alert("문의 정보가 유효하지 않습니다. 처음 화면으로 이동합니다.");
-          router.replace(`/chat-summary/${sellerId}`);
+          setTimeout(() => router.replace(`/chat-summary/${sellerId}`), 100);
         }
       } catch (error) {
         console.error("checkInquiry 오류:", error);
@@ -54,7 +56,7 @@ const ChatBotScreen = ({ sellerId, inquiryId }: Props) => {
         const plan = snap.data()?.plan || "free";
         if (plan === "free") {
           alert("무료 요금제는 챗봇 기능이 제한됩니다.");
-          router.replace(`/chat-summary/${sellerId}`);
+          setTimeout(() => router.replace(`/chat-summary/${sellerId}`), 100);
         }
       } catch (error) {
         console.error("checkPlan 오류:", error);
@@ -96,7 +98,7 @@ const ChatBotScreen = ({ sellerId, inquiryId }: Props) => {
     const watchSellerActive = onSnapshot(doc(db, "sellers", sellerId, "inquiries", inquiryId), (docSnap) => {
       if (docSnap.data()?.sellerActive) {
         alert("상담원이 채팅에 참여하여 챗봇이 종료됩니다.");
-        router.replace(`/chat-summary/${sellerId}`);
+        setTimeout(() => router.replace(`/chat-summary/${sellerId}`), 100);
       }
     });
     return () => watchSellerActive();

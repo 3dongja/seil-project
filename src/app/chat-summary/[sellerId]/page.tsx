@@ -1,3 +1,5 @@
+// ✅ 5. page.tsx (진입 화면) 확인 결과: 수정 불필요
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -164,7 +166,7 @@ const ChatSummaryPage = () => {
           onSelect={(mode) => {
             setShowModal(false);
             if (!sellerId || !lastInquiryId) return;
-           const resolvedMode = (["chat", "summary", "bot"].includes(mode as string)
+            const resolvedMode = (["chat", "summary", "bot"].includes(mode as string)
               ? (mode as "chat" | "summary" | "bot")
               : "summary");
             switch (resolvedMode) {

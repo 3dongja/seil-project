@@ -1,3 +1,5 @@
+// ✅ SummaryResultModal.tsx 수정본: router.replace 타이밍 보완 및 요금제 분기 유지
+
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -31,7 +33,7 @@ export default function SummaryResultModal({
         const snap = await getDoc(inquiryRef);
         if (!snap.exists()) {
           alert("요약 정보가 존재하지 않아 처음 화면으로 이동합니다.");
-          router.replace(`/chat-summary/${sellerId}`);
+          setTimeout(() => router.replace(`/chat-summary/${sellerId}`), 100);
         }
       } catch (error) {
         console.error("요약 조회 오류:", error);

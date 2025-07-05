@@ -1,3 +1,5 @@
+// ✅ ChatScreen.tsx 수정본: 라우팅 타이밍 문제 해결
+
 "use client";
 
 import { useEffect, useState, useRef } from "react";
@@ -95,7 +97,7 @@ export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm =
         const snap = await getDoc(ref);
         if (!snap.exists()) {
           alert("문의 정보가 유효하지 않습니다. 처음 화면으로 이동합니다.");
-          router.replace(`/chat-summary/${sellerId}`);
+          setTimeout(() => router.replace(`/chat-summary/${sellerId}`), 100);
         }
       } catch (error) {
         console.error("validate 오류:", error);
