@@ -1,36 +1,38 @@
-// src/lib/gpt/prompt.ts
+// ✅ src/lib/gpt/prompt.ts
 
-export interface PromptSettings {
-  industry: string;
-  category: string;
-  products: string;
-  promptCue: string;
-  welcomeMessage: string;
+/**
+ * GPT에게 전달할 프롬프트를 구성합니다.
+ * 고객의 이름, 연락처, 상세 문의 내용을 기반으로 요약 요청용 메시지를 생성합니다.
+ */
+export function buildPrompt(userInfo: {
+  name: string;
+  phone: string;
+  details: string;
+}): string {
+  return `
+고객 문의 요약:
+
+- 고객명: ${userInfo.name}
+- 연락처: ${userInfo.phone}
+- 문의 내용: ${userInfo.details}
+
+위 정보를 기반으로, 사업주가 빠르게 파악할 수 있도록 핵심만 요약해줘.
+중복 표현 없이, 너무 길거나 모호하지 않게 해줘.
+`; 
 }
 
 /**
- * 판매자 설정에 따라 요약용 GPT 프롬프트를 생성합니다
+ * 요약 요청을 GPT API에 보냅니다.
  */
-export function buildPrompt({ industry, category, products, promptCue, welcomeMessage }: PromptSettings): string {
-  return `당신은 고객센터 요약 AI입니다.
-판매자의 업종과 판매 품목을 참고하되, 그 외 주제나 과거 정보로 벗어나지 말고 고객의 말과 해당 판매자의 업종/상품 안에서만 집중해서 요약하세요.
+export async function generateSummary(prompt: string): Promise<string> {
+  const res = await fetch("/api/summary", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt }),
+  });
 
-업종: ${industry}
-카테고리: ${category}
-판매상품: ${products}
+  if (!res.ok) throw new Error("GPT 요약 실패");
 
-고객에게는 다음과 같이 안내하세요: "${welcomeMessage}"
-유도 질문: ${promptCue}`;
+  const data = await res.json();
+  return data.summary;
 }
-
-/**
- * (선택) 템플릿화된 안내 프롬프트 기본값
- * ※ 예시용이며 실제 사용 시 Firestore에서 판매자 설정을 불러옵니다.
- */
-export const defaultPrompt: PromptSettings = {
-  industry: "예: 과일 유통",
-  category: "상담",
-  products: "예: 수박, 고구마 등 다양한 상품 가능",
-  promptCue: "예: 어떤 상품을 반품 원하시나요?",
-  welcomeMessage: "예: 안녕하세요! 문의주세요.",
-};

@@ -1,4 +1,4 @@
-// ✅ 1. summary/page.tsx 수정본: 라우팅 지연 처리로 초기화 방지
+// ✅ 1. summary/page.tsx 수정본: 첫 화면에서 저장된 이름/연락처 검증 기반
 
 "use client";
 
@@ -17,6 +17,7 @@ export default function SummaryPage() {
   const [categoryData, setCategoryData] = useState<Record<string, string>>({});
   const [valid, setValid] = useState(true);
   const [questionForms, setQuestionForms] = useState<any>(defaultForms);
+  const [userInfo, setUserInfo] = useState<{ name: string; phone: string } | null>(null);
 
   useEffect(() => {
     const validateInquiry = async () => {
@@ -26,7 +27,15 @@ export default function SummaryPage() {
       if (!snap.exists()) {
         alert("문의 정보가 존재하지 않습니다. 메인 화면으로 이동합니다.");
         setTimeout(() => router.replace(`/chat-summary/${sellerId}`), 100);
+        return;
       }
+      const data = snap.data();
+      if (!data?.name || !data?.phone) {
+        alert("이름과 연락처 정보가 없습니다. 처음 화면으로 돌아갑니다.");
+        router.replace(`/chat-summary/${sellerId}`);
+        return;
+      }
+      setUserInfo({ name: data.name, phone: data.phone });
     };
     validateInquiry();
   }, [sellerId, inquiryId]);
@@ -44,6 +53,11 @@ export default function SummaryPage() {
   }, [sellerId]);
 
   const handleSubmit = async () => {
+    if (!userInfo?.name || !userInfo?.phone) {
+      alert("기본 사용자 정보가 없습니다.");
+      return;
+    }
+
     const inquiryRef = doc(db, "sellers", sellerId, "inquiries", inquiryId);
 
     const messages = [
@@ -66,8 +80,15 @@ export default function SummaryPage() {
       console.error("요약 생성 실패:", e);
     }
 
-    await setDoc(inquiryRef, { details: categoryData, category, summary }, { merge: true });
-    router.push("/complete");
+    await setDoc(inquiryRef, {
+      details: categoryData,
+      category,
+      summary,
+      name: userInfo.name,
+      phone: userInfo.phone
+    }, { merge: true });
+
+    router.push(`/chat-summary/${sellerId}/${inquiryId}/summary/complete`);
   };
 
   return (

@@ -1,132 +1,74 @@
-// src/app/api/summary/route.ts
-import { NextResponse } from "next/server";
-import { db } from "@/lib/firebase";
-import {
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  Timestamp,
-  getDocs,
-  query,
-  where
-} from "firebase/firestore";
-import OpenAI from "openai";
+// ✅ src/app/api/summary/route.ts
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+import { NextResponse } from "next/server";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { initializeApp, getApps } from "firebase/app";
+
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+};
+
+if (getApps().length === 0) {
+  initializeApp(firebaseConfig);
+}
+const db = getFirestore();
 
 export async function POST(req: Request) {
-  const body = await req.json();
-  const { sellerId, inquiryId, messages, plan = "free" } = body;
-
-  if (!sellerId || !inquiryId || !Array.isArray(messages)) {
-    console.warn("요약 요청 파라미터 누락 또는 형식 오류", { sellerId, inquiryId, messages });
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-  }
-
-  // 설정 정보 가져오기
-  const sellerRef = doc(db, "sellers", sellerId);
-  const settingsRef = doc(sellerRef, "settings/chatbot");
-  const settingsSnap = await getDoc(settingsRef);
-  const settings = settingsSnap.exists() ? settingsSnap.data() : {};
-
-  const industry = settings.industry || "";
-  const products = settings.products || "";
-  const promptCue = settings.promptCue || "";
-  const welcomeMessage = settings.welcomeMessage || "";
-  const category = settings.category || "상담";
-
-  const systemPrompt = `당신은 고객센터 요약 AI입니다. 
-판매자의 업종과 판매 품목을 참고하되, 그 외 주제나 과거 정보로 벗어나지 말고 고객의 말과 해당 판매자의 업종/상품 안에서만 집중해서 요약하세요.
-
-업종: ${industry}
-카테고리: ${category}
-판매상품: ${products}
-
-고객에게는 다음과 같이 안내하세요: "${welcomeMessage}"
-유도 질문: ${promptCue}
-
-- 요약은 다음 항목만 포함: 요청내용, 이유, 날짜, 연락처
-- 말머리 제거: "고객은", "요약:" 금지
-- 1~2문장 간결 요약
-- \u001b[1m만약 요청내용, 이유, 날짜, 연락처 중 누락된 항목이 있다면 대화 내용을 기반으로 합리적으로 추론해 채워넣으세요.\u001b[0m`;
-
-  const summaryMessages = [
-    { role: "system", content: systemPrompt },
-    ...messages,
-    { role: "user", content: "위 대화를 상담자 입장에서 요약해줘. 단답형이 아닌 설명식으로 정리해줘." }
-  ];
-
-  let summary = "";
   try {
-    const chat = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: summaryMessages,
-    });
-    summary = chat.choices[0].message.content ?? "요약 실패";
-  } catch (err) {
-    console.error("요약 실패:", err);
-    summary = "요약 실패 (시스템 오류 발생)";
-  }
-
-  const createdAt = Timestamp.now();
-
-  const summaryDoc = {
-    sender: "system",
-    text: summary,
-    createdAt,
-    type: "summary",
-    status: "done",
-  };
-
-  const logDoc = {
-    sellerId,
-    inquiryId,
-    reply: summary,
-    source: "summary-api",
-    createdAt,
-  };
-
-  try {
-    await Promise.all([
-      addDoc(collection(db, "sellers", sellerId, "inquiries", inquiryId, "messages"), summaryDoc),
-      addDoc(collection(db, "admin", "chat-logs", "logs"), logDoc),
-    ]);
-
-    const templatesSnap = await getDocs(query(
-      collection(db, "templates"),
-      where("sellerId", "==", sellerId),
-      where("category", "==", category)
-    ));
-
-    for (const docSnap of templatesSnap.docs) {
-      const t = docSnap.data();
-      const matched = t.keywords?.some((kw: string) => summary.includes(kw));
-      if (matched) {
-        await addDoc(collection(db, "sellers", sellerId, "inquiries", inquiryId, "messages"), {
-          sender: "system",
-          text: t.message,
-          createdAt: Timestamp.now(),
-          type: "template",
-          status: "done",
-        });
-        break;
-      }
+    const { prompt, sellerId } = await req.json();
+    if (!prompt || typeof prompt !== "string" || !sellerId) {
+      return NextResponse.json({ error: "프롬프트 또는 판매자 ID 누락" }, { status: 400 });
     }
 
-    const compressed = `입력:${messages.map(m => m.content).join(" ").replace(/\s+/g,"")}` +
-      ` 요약:${summary.replace(/\s+/g,"")}`;
-    await addDoc(collection(db, "adminSummaryStore"), {
-      sellerId,
-      inquiryId,
-      data: compressed,
-      createdAt,
+    const apiKey = process.env.OPENAI_API_KEY_GPT35;
+    if (!apiKey) {
+      return NextResponse.json({ error: "API 키 누락됨" }, { status: 500 });
+    }
+
+    // Firestore에서 seller 설정 불러오기
+    const configRef = doc(db, "sellers", sellerId, "settings", "chatbot");
+    const configSnap = await getDoc(configRef);
+    const config = configSnap.exists() ? configSnap.data() : {};
+
+    const industry = config?.industry || "해당 분야";
+    const product = config?.products || "제품";
+    const promptCue = config?.promptCue || "너는 정확하고 간결한 요약 AI야.";
+
+    const systemMessage = `
+${promptCue}
+- 업종: ${industry}
+- 주요 제품: ${product}
+- 요약은 명확하고 실용적으로 작성해줘.
+`.trim();
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-3.5-turbo",
+        messages: [
+          { role: "system", content: systemMessage },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.5,
+        max_tokens: 300,
+      }),
     });
 
-  } catch (err) {
-    console.error("Firestore 저장 오류:", err);
-    return NextResponse.json({ error: "저장 실패" }, { status: 500 });
-  }
+    const data = await response.json();
+    const summary = data?.choices?.[0]?.message?.content?.trim();
+    if (!summary) {
+      return NextResponse.json({ error: "요약 결과가 없습니다." }, { status: 500 });
+    }
 
-  return NextResponse.json({ summary });
+    return NextResponse.json({ summary });
+  } catch (err) {
+    console.error("GPT 요약 실패:", err);
+    return NextResponse.json({ error: "서버 오류 - GPT 처리 실패" }, { status: 500 });
+  }
 }
