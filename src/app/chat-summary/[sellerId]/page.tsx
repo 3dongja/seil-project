@@ -1,4 +1,3 @@
-// src/app/chat-summary/[sellerId]/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -34,11 +33,15 @@ const ChatSummaryPage = () => {
 
   useEffect(() => {
     const fetchTimes = async () => {
-      const refDoc = doc(db, "sellers", sellerId, "settings", "chatbot");
-      const snap = await getDoc(refDoc);
-      const data = snap.data();
-      if (data?.openTime) setOpenTime(data.openTime);
-      if (data?.closeTime) setCloseTime(data.closeTime);
+      try {
+        const refDoc = doc(db, "sellers", sellerId, "settings", "chatbot");
+        const snap = await getDoc(refDoc);
+        const data = snap.data();
+        if (data?.openTime) setOpenTime(data.openTime);
+        if (data?.closeTime) setCloseTime(data.closeTime);
+      } catch (error) {
+        console.error("운영 시간 불러오기 실패:", error);
+      }
     };
     fetchTimes();
   }, [sellerId]);
@@ -97,6 +100,7 @@ const ChatSummaryPage = () => {
         setShowModal(true);
       }
     } catch (err) {
+      console.error("저장 중 오류:", err);
       alert("저장 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
@@ -154,10 +158,24 @@ const ChatSummaryPage = () => {
       </div>
 
       {showModal && lastInquiryId && (
-      <SummaryResultModal
-        sellerId={sellerId}
-        inquiryId={lastInquiryId}
-        onSelect={() => setShowModal(false)}
+        <SummaryResultModal
+          sellerId={sellerId}
+          inquiryId={lastInquiryId}
+          onSelect={(mode) => {
+            setShowModal(false);
+            if (!sellerId || !lastInquiryId) return;
+            switch (mode) {
+              case "chat":
+                router.push(`/chat-summary/${sellerId}/${lastInquiryId}`);
+                break;
+              case "bot":
+                router.push(`/chat-summary/${sellerId}/${lastInquiryId}/bot`);
+                break;
+              case "log":
+                router.push(`/chat-summary/${sellerId}/${lastInquiryId}/summary`);
+                break;
+            }
+          }}
         />
       )}
     </main>

@@ -1,7 +1,6 @@
-// src/components/chat/ChatScreen.tsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import KakaoChatInputBar from "./KakaoChatInputBar";
@@ -76,7 +75,7 @@ interface ChatScreenProps {
     name?: string;
     phone?: string;
   };
-  useApiSummary?: boolean; // ✅ 추가됨
+  useApiSummary?: boolean;
 }
 
 export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm = "", sortOrder = "asc", category, summaryInfo, useApiSummary }: ChatScreenProps) {
@@ -91,11 +90,15 @@ export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm =
 
   useEffect(() => {
     const validate = async () => {
-      const ref = doc(db, "sellers", sellerId, "inquiries", inquiryId);
-      const snap = await getDoc(ref);
-      if (!snap.exists()) {
-        alert("문의 정보가 유효하지 않습니다. 처음 화면으로 이동합니다.");
-        router.replace(`/chat-summary/${sellerId}`);
+      try {
+        const ref = doc(db, "sellers", sellerId, "inquiries", inquiryId);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) {
+          alert("문의 정보가 유효하지 않습니다. 처음 화면으로 이동합니다.");
+          router.replace(`/chat-summary/${sellerId}`);
+        }
+      } catch (error) {
+        console.error("validate 오류:", error);
       }
     };
     validate();
@@ -122,38 +125,42 @@ export default function ChatScreen({ sellerId, inquiryId, userType, searchTerm =
     if (inputText === lastSummaryInput) return;
 
     const fetchSummary = async () => {
-      const settingsRef = doc(db, "sellers", sellerId, "settings", "chatbot");
-      const settingsSnap = await getDoc(settingsRef);
-      const systemPrompt = settingsSnap.exists() ? settingsSnap.data() : {};
+      try {
+        const settingsRef = doc(db, "sellers", sellerId, "settings", "chatbot");
+        const settingsSnap = await getDoc(settingsRef);
+        const systemPrompt = settingsSnap.exists() ? settingsSnap.data() : {};
 
-      const messageEntries = Object.entries(answers)
-        .filter(([_, v]) => v?.trim())
-        .map(([k, v]) => ({ role: "user", content: `${k}: ${v}` }));
+        const messageEntries = Object.entries(answers)
+          .filter(([_, v]) => v?.trim())
+          .map(([k, v]) => ({ role: "user", content: `${k}: ${v}` }));
 
-      if (useApiSummary && messageEntries.length > 0) {
-        const response = await fetch("/api/summary", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sellerId, inquiryId, messages: messageEntries })
-        });
-        const data = await response.json();
-        await setDoc(doc(db, "sellers", sellerId, "inquiries", inquiryId, "summary", "auto"), {
-          category: resolvedCategory,
-          answers,
-          summary: data.summary,
-          updatedAt: new Date()
-        });
-      } else if (!useApiSummary) {
-        const summary = await getSummaryFromAnswers(sellerId, resolvedCategory, answers, systemPrompt);
-        await setDoc(doc(db, "sellers", sellerId, "inquiries", inquiryId, "summary", "auto"), {
-          category: resolvedCategory,
-          answers,
-          summary,
-          updatedAt: new Date()
-        });
+        if (useApiSummary && messageEntries.length > 0) {
+          const response = await fetch("/api/summary", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sellerId, inquiryId, messages: messageEntries })
+          });
+          const data = await response.json();
+          await setDoc(doc(db, "sellers", sellerId, "inquiries", inquiryId, "summary", "auto"), {
+            category: resolvedCategory,
+            answers,
+            summary: data.summary,
+            updatedAt: new Date()
+          });
+        } else if (!useApiSummary) {
+          const summary = await getSummaryFromAnswers(sellerId, resolvedCategory, answers, systemPrompt);
+          await setDoc(doc(db, "sellers", sellerId, "inquiries", inquiryId, "summary", "auto"), {
+            category: resolvedCategory,
+            answers,
+            summary,
+            updatedAt: new Date()
+          });
+        }
+
+        setLastSummaryInput(inputText);
+      } catch (error) {
+        console.error("fetchSummary 오류:", error);
       }
-
-      setLastSummaryInput(inputText);
     };
     fetchSummary();
   }, [answers, valid]);

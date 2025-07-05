@@ -1,4 +1,3 @@
-// ChatBotScreen.tsx
 "use client";
 
 import { useEffect, useState, useRef } from "react";
@@ -33,11 +32,15 @@ const ChatBotScreen = ({ sellerId, inquiryId }: Props) => {
 
   useEffect(() => {
     const checkInquiry = async () => {
-      const ref = doc(db, "sellers", sellerId, "inquiries", inquiryId);
-      const snap = await getDoc(ref);
-      if (!snap.exists()) {
-        alert("문의 정보가 유효하지 않습니다. 처음 화면으로 이동합니다.");
-        router.replace(`/chat-summary/${sellerId}`);
+      try {
+        const ref = doc(db, "sellers", sellerId, "inquiries", inquiryId);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) {
+          alert("문의 정보가 유효하지 않습니다. 처음 화면으로 이동합니다.");
+          router.replace(`/chat-summary/${sellerId}`);
+        }
+      } catch (error) {
+        console.error("checkInquiry 오류:", error);
       }
     };
     checkInquiry();
@@ -45,13 +48,16 @@ const ChatBotScreen = ({ sellerId, inquiryId }: Props) => {
 
   useEffect(() => {
     const checkPlan = async () => {
-      const sellerRef = doc(db, "sellers", sellerId);
-      const snap = await getDoc(sellerRef);
-      const plan = snap.data()?.plan || "free";
-
-      if (plan === "free") {
-        alert("무료 요금제는 챗봇 기능이 제한됩니다.");
-        router.replace(`/chat-summary/${sellerId}`);
+      try {
+        const sellerRef = doc(db, "sellers", sellerId);
+        const snap = await getDoc(sellerRef);
+        const plan = snap.data()?.plan || "free";
+        if (plan === "free") {
+          alert("무료 요금제는 챗봇 기능이 제한됩니다.");
+          router.replace(`/chat-summary/${sellerId}`);
+        }
+      } catch (error) {
+        console.error("checkPlan 오류:", error);
       }
     };
     checkPlan();
@@ -59,12 +65,16 @@ const ChatBotScreen = ({ sellerId, inquiryId }: Props) => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const refDoc = doc(db, "sellers", sellerId, "inquiries", inquiryId);
-      const snap = await getDoc(refDoc);
-      const data = snap.data();
-      setSummary(data?.summary || "");
-      setCategory(data?.category || "");
-      setDetails(data?.details || {});
+      try {
+        const refDoc = doc(db, "sellers", sellerId, "inquiries", inquiryId);
+        const snap = await getDoc(refDoc);
+        const data = snap.data();
+        setSummary(data?.summary || "");
+        setCategory(data?.category || "");
+        setDetails(data?.details || {});
+      } catch (error) {
+        console.error("fetchData 오류:", error);
+      }
     };
     fetchData();
   }, [sellerId, inquiryId]);

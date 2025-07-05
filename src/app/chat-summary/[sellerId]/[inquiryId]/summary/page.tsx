@@ -1,4 +1,3 @@
-// /src/app/chat-summary/[sellerId]/[inquiryId]/summary/page.tsx
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
@@ -16,15 +15,20 @@ export default function SummaryPage() {
   const [categoryData, setCategoryData] = useState<Record<string, string>>({});
   const [valid, setValid] = useState(true);
   const [questionForms, setQuestionForms] = useState<any>(defaultForms);
+  const [loading, setLoading] = useState(true);
+
+  // ✅ useParams 초기값 가드
+  if (!sellerId || !inquiryId) return <div>잠시만 기다려주세요...</div>;
 
   useEffect(() => {
     const validateInquiry = async () => {
-      if (!sellerId || !inquiryId) return;
       const ref = doc(db, "sellers", sellerId, "inquiries", inquiryId);
       const snap = await getDoc(ref);
       if (!snap.exists()) {
         alert("문의 정보가 존재하지 않습니다. 메인 화면으로 이동합니다.");
         router.replace(`/chat-summary/${sellerId}`);
+      } else {
+        setLoading(false);
       }
     };
     validateInquiry();
@@ -68,6 +72,8 @@ export default function SummaryPage() {
     await setDoc(inquiryRef, { details: categoryData, category, summary }, { merge: true });
     router.push("/complete");
   };
+
+  if (loading) return <div>문의 데이터를 불러오고 있습니다...</div>;
 
   return (
     <main className="p-4 space-y-4 max-w-md mx-auto">

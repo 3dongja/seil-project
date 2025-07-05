@@ -25,26 +25,38 @@ export default function SummaryResultModal({
 
   useEffect(() => {
     if (!sellerId || !inquiryId) return;
-    const inquiryRef = doc(db, "sellers", sellerId, "inquiries", inquiryId);
-    getDoc(inquiryRef).then((snap) => {
-      if (!snap.exists()) {
-        alert("요약 정보가 존재하지 않아 처음 화면으로 이동합니다.");
-        router.replace(`/chat-summary/${sellerId}`);
+    const checkInquiry = async () => {
+      try {
+        const inquiryRef = doc(db, "sellers", sellerId, "inquiries", inquiryId);
+        const snap = await getDoc(inquiryRef);
+        if (!snap.exists()) {
+          alert("요약 정보가 존재하지 않아 처음 화면으로 이동합니다.");
+          router.replace(`/chat-summary/${sellerId}`);
+        }
+      } catch (error) {
+        console.error("요약 조회 오류:", error);
       }
-    });
+    };
+    checkInquiry();
   }, [sellerId, inquiryId]);
 
   useEffect(() => {
     if (!sellerId) return;
-    const ref = doc(db, "sellers", sellerId);
-    getDoc(ref).then((snap) => {
-      const data = snap.data();
-      if (data?.plan === "basic" || data?.plan === "premium") {
-        setPlan(data.plan);
-      } else {
-        setPlan("free");
+    const fetchPlan = async () => {
+      try {
+        const ref = doc(db, "sellers", sellerId);
+        const snap = await getDoc(ref);
+        const data = snap.data();
+        if (data?.plan === "basic" || data?.plan === "premium") {
+          setPlan(data.plan);
+        } else {
+          setPlan("free");
+        }
+      } catch (error) {
+        console.error("요금제 조회 오류:", error);
       }
-    });
+    };
+    fetchPlan();
   }, [sellerId]);
 
   const validateBeforePush = async (path: string, mode: "chat" | "bot" | "log") => {
@@ -52,14 +64,18 @@ export default function SummaryResultModal({
       alert("요약을 먼저 저장해주세요.");
       return;
     }
-    const inquiryRef = doc(db, "sellers", sellerId, "inquiries", inquiryId);
-    const inquirySnap = await getDoc(inquiryRef);
-    if (!inquirySnap.exists()) {
-      alert("요약을 먼저 저장해주세요.");
-      return;
+    try {
+      const inquiryRef = doc(db, "sellers", sellerId, "inquiries", inquiryId);
+      const inquirySnap = await getDoc(inquiryRef);
+      if (!inquirySnap.exists()) {
+        alert("요약을 먼저 저장해주세요.");
+        return;
+      }
+      await router.push(path);
+      setTimeout(() => onSelect(mode), 100);
+    } catch (error) {
+      console.error("이동 오류:", error);
     }
-    await router.push(path);
-    setTimeout(() => onSelect(mode), 100); // 모달 닫힘 지연
   };
 
   return (
@@ -97,7 +113,7 @@ export default function SummaryResultModal({
         )}
 
         <button
-          onClick={() => validateBeforePush(`/chat/${sellerId}/${inquiryId}`, "chat")}
+          onClick={() => validateBeforePush(`/chat-summary/${sellerId}/${inquiryId}`, "chat")}
           className="bg-white rounded-2xl shadow-lg p-6 w-72 h-80 flex flex-col items-center justify-between hover:ring-2 ring-blue-400"
         >
           <Image src="/curious.GIF" alt="1:1 상담원" width={160} height={160} className="object-contain" />
