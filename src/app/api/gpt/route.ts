@@ -74,17 +74,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "GPT 응답이 비어 있음" }, { status: 500 });
     }
 
-    await adminDb.collection("logs").add({
-      sellerId,
-      inquiryId,
-      user: user?.email ?? "anonymous",
-      prompt,
-      message,
-      model: selectedModel,
-      createdAt: FieldValue.serverTimestamp(),
-      intent: "chat",
-      status: "done",
-    });
+    try {
+      await adminDb.collection("logs").add({
+        sellerId,
+        inquiryId,
+        user: user?.email ?? "anonymous",
+        prompt,
+        message,
+        model: selectedModel,
+        createdAt: FieldValue.serverTimestamp(),
+        intent: "chat",
+        status: "done",
+      });
+    } catch (logError) {
+      console.error("Firestore 로그 저장 실패:", logError);
+    }
 
     return NextResponse.json({ message });
   } catch (err) {
