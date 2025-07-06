@@ -14,8 +14,14 @@ console.log("[ENV CHECK]");
   console.log(`ENV::${key} =`, val ? `${val.slice(0, 4)}...` : "❌ NOT SET");
 });
 
+// 🔐 빌드 타임 검증 강화
+const raw = process.env.FIREBASE_ADMIN_KEY;
+if (!raw) {
+  throw new Error("FIREBASE_ADMIN_KEY가 정의되지 않았습니다. Vercel 환경 변수 확인 필요.");
+}
+
 if (!admin.apps.length) {
-  const serviceAccount = JSON.parse(requireEnv("FIREBASE_ADMIN_KEY"));
+  const serviceAccount = JSON.parse(raw);
 
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
