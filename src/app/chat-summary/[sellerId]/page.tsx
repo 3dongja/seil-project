@@ -51,10 +51,10 @@ const ChatSummaryPage = () => {
   };
 
   const handleEmailSuggestion = (domain: string) => {
-    if (!email.includes("@")) return;
-    const [local] = email.split("@");
-    setEmail(`${local}@${domain}`);
-    setEmailInputFocus(false);
+  if (!email.includes("@")) return;
+  const [local] = (email ?? "").split("@");
+  setEmail(`${local}@${domain}`);
+  setEmailInputFocus(false);
   };
 
   const handleSave = async () => {
@@ -143,7 +143,7 @@ const ChatSummaryPage = () => {
                     onClick={() => handleEmailSuggestion(domain)}
                     className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
                   >
-                    {email.includes("@") ? `${email.split("@")[0]}@${domain}` : `@${domain}`}
+                    {email.includes("@") ? `${(email ?? "").split("@")[0]}@${domain}` : `@${domain}`}
                   </li>
                 ))}
               </ul>
