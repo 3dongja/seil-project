@@ -11,7 +11,7 @@ interface Message {
 }
 
 export default async function AdminChatLogPage({ params }: any) {
-  const [sellerId, inquiryId] = params.id.split("-");
+  const [sellerId, inquiryId] = (params.id ?? "").split("-");
 
   if (!sellerId || !inquiryId) return notFound();
 

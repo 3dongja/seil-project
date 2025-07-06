@@ -25,9 +25,10 @@ export default function SellerLiveChatWrapper({ uid, inquiryId }: Props) {
       if (inquiryId) {
         const snap = await getDocs(collectionGroup(db, "inquiries"));
         const match = snap.docs.find(doc => doc.id === inquiryId);
-        if (match) {
-          const path = match.ref.path.split("/");
-          const foundSellerId = path[path.indexOf("sellers") + 1];
+
+        if (match && match.ref && typeof match.ref.path === "string" && match.ref.path.includes("/")) {
+          const pathParts = match.ref.path.split("/");
+          const foundSellerId = pathParts[pathParts.indexOf("sellers") + 1] ?? "";
           setSellerId(foundSellerId);
           setSelectedInquiryId(inquiryId);
         }
