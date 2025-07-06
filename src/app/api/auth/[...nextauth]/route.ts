@@ -9,18 +9,16 @@ function requireEnv(key: string): string {
 }
 
 console.log("[ENV CHECK]");
-["NEXTAUTH_URL", "NEXTAUTH_URL_INTERNAL", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "NEXTAUTH_SECRET", "NEXT_PUBLIC_ADMIN_EMAIL", "FIREBASE_PROJECT_ID", "FIREBASE_CLIENT_EMAIL", "FIREBASE_PRIVATE_KEY"].forEach(key => {
+["NEXTAUTH_URL", "NEXTAUTH_URL_INTERNAL", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "NEXTAUTH_SECRET", "NEXT_PUBLIC_ADMIN_EMAIL", "FIREBASE_ADMIN_KEY"].forEach(key => {
   const val = process.env[key];
   console.log(`ENV::${key} =`, val ? `${val.slice(0, 4)}...` : "❌ NOT SET");
 });
 
 if (!admin.apps.length) {
+  const serviceAccount = JSON.parse(requireEnv("FIREBASE_ADMIN_KEY"));
+
   admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: requireEnv("FIREBASE_PROJECT_ID"),
-      privateKey: requireEnv("FIREBASE_PRIVATE_KEY").replace(/\\n/g, '\n'),
-      clientEmail: requireEnv("FIREBASE_CLIENT_EMAIL"),
-    }),
+    credential: admin.credential.cert(serviceAccount),
   });
 }
 
