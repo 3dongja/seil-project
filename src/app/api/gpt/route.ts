@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { adminDb } from "@/lib/firebase-admin";
-import { FieldValue } from "firebase-admin/firestore";
+import admin from "firebase-admin"; // ✅ 추가
 
 export async function POST(req: NextRequest) {
   try {
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
         prompt,
         message,
         model: selectedModel,
-        createdAt: FieldValue.serverTimestamp(),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(), // ✅ 수정
         intent: "chat",
         status: "done",
       });
