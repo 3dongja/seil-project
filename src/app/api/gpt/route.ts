@@ -26,7 +26,14 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     const user = session?.user;
 
+    const selectedModel = typeof model === "string" && model.includes("gpt-4") ? "gpt-4" : "gpt-3.5-turbo";
+
+    if (selectedModel === "gpt-4") {
+      return NextResponse.json({ error: "GPT-4 모델은 현재 준비 중입니다." }, { status: 403 });
+    }
+
     const apiKey = process.env.OPENAI_API_KEY_GPT35;
+
     if (!apiKey) {
       return NextResponse.json({ error: "API 키 누락됨" }, { status: 500 });
     }
@@ -40,7 +47,7 @@ export async function POST(req: NextRequest) {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: model.includes("gpt-4") ? "gpt-4" : "gpt-3.5-turbo",
+        model: selectedModel,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt },
@@ -73,7 +80,7 @@ export async function POST(req: NextRequest) {
       user: user?.email ?? "anonymous",
       prompt,
       message,
-      model,
+      model: selectedModel,
       createdAt: FieldValue.serverTimestamp(),
       intent: "chat",
       status: "done",
