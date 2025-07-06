@@ -1,15 +1,18 @@
 import NextAuth, { type NextAuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 
-// ✅ 디버그 로그 삽입
-console.log("DEBUG: NEXTAUTH_URL =", process.env.NEXTAUTH_URL);
-console.log("DEBUG: NEXTAUTH_URL_INTERNAL =", process.env.NEXTAUTH_URL_INTERNAL);
-console.log("DEBUG: GOOGLE_CLIENT_ID =", process.env.GOOGLE_CLIENT_ID);
+// ✅ 디버그 로그 삽입 (환경 변수 누락 확인용)
+console.log("ENV::NEXTAUTH_URL =", process.env.NEXTAUTH_URL ?? "❌ NOT SET");
+console.log("ENV::NEXTAUTH_URL_INTERNAL =", process.env.NEXTAUTH_URL_INTERNAL ?? "❌ NOT SET");
+console.log("ENV::GOOGLE_CLIENT_ID =", process.env.GOOGLE_CLIENT_ID ?? "❌ NOT SET");
+console.log("ENV::GOOGLE_CLIENT_SECRET =", process.env.GOOGLE_CLIENT_SECRET ?? "❌ NOT SET");
+console.log("ENV::NEXTAUTH_SECRET =", process.env.NEXTAUTH_SECRET ?? "❌ NOT SET");
+console.log("ENV::NEXT_PUBLIC_ADMIN_EMAIL =", process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "❌ NOT SET");
 
 // ✅ Firebase Admin 서비스 계정 정보 로그 (개별 항목 확인용)
-console.log("DEBUG: FIREBASE_PROJECT_ID =", process.env.FIREBASE_PROJECT_ID);
-console.log("DEBUG: FIREBASE_CLIENT_EMAIL =", process.env.FIREBASE_CLIENT_EMAIL);
-console.log("DEBUG: FIREBASE_PRIVATE_KEY (길이) =", process.env.FIREBASE_PRIVATE_KEY?.length);
+console.log("ENV::FIREBASE_PROJECT_ID =", process.env.FIREBASE_PROJECT_ID ?? "❌ NOT SET");
+console.log("ENV::FIREBASE_CLIENT_EMAIL =", process.env.FIREBASE_CLIENT_EMAIL ?? "❌ NOT SET");
+console.log("ENV::FIREBASE_PRIVATE_KEY length =", process.env.FIREBASE_PRIVATE_KEY?.length ?? "❌ NOT SET");
 
 function getAuthOptions(): NextAuthOptions {
   return {
