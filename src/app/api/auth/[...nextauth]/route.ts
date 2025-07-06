@@ -17,26 +17,19 @@ console.log("ENV::FIREBASE_PRIVATE_KEY length =", process.env.FIREBASE_PRIVATE_K
 
 // ✅ Firebase Admin 초기화 보호
 if (!admin.apps.length) {
-  const rawKey = process.env.FIREBASE_ADMIN_KEY;
-
-  if (!rawKey) {
-    throw new Error("❌ FIREBASE_ADMIN_KEY is missing in environment variables.");
-  }
-
-  let parsed;
-  try {
-    parsed = JSON.parse(rawKey);
-    if (!parsed.private_key) {
-      throw new Error("❌ parsed.private_key is undefined.");
-    }
-    parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
-  } catch (error) {
-    console.error("❌ Failed to parse FIREBASE_ADMIN_KEY or private_key missing:", error);
-    throw error;
-  }
-
   admin.initializeApp({
-    credential: admin.credential.cert(parsed),
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID!,
+      privateKeyId: process.env.FIREBASE_PRIVATE_KEY_ID!,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, "\n"),
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
+      clientId: process.env.FIREBASE_CLIENT_ID!,
+      authUri: process.env.FIREBASE_AUTH_URI!,
+      tokenUri: process.env.FIREBASE_TOKEN_URI!,
+      authProviderX509CertUrl: process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL!,
+      clientC509CertUrl: process.env.FIREBASE_CLIENT_X509_CERT_URL!,
+      universeDomain: process.env.FIREBASE_UNIVERSE_DOMAIN!,
+    } as any), // 강제 우회 (Firebase Admin SDK 타입 불일치 이슈 회피)
   });
 }
 
