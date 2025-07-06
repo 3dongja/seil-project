@@ -18,7 +18,7 @@ if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert({
       projectId: requireEnv("FIREBASE_PROJECT_ID"),
-      privateKey: requireEnv("FIREBASE_PRIVATE_KEY").replace(/\n/g, "\\n"),
+      privateKey: requireEnv("FIREBASE_PRIVATE_KEY").replace(/\\n/g, '\n'),
       clientEmail: requireEnv("FIREBASE_CLIENT_EMAIL"),
     }),
   });
