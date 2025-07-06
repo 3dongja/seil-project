@@ -95,6 +95,11 @@ const ChatSummaryPage = () => {
         });
       }
 
+      // 🔍 디버깅용 요금제 확인 로그
+      const profileSnap = await getDoc(doc(db, "users", sellerId, "seller", "profile"));
+      const planData = profileSnap.data();
+      console.log("현재 요금제(plan):", planData?.plan);
+
       localStorage.setItem("sellerId", sellerId);
       localStorage.setItem("inquiryId", inquiryId);
       router.push(`/chat-summary/${sellerId}/${inquiryId}/summary`);

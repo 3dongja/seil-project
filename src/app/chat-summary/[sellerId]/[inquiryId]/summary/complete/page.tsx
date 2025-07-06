@@ -66,8 +66,9 @@ export default function SummaryCompletePage() {
         setSummary(summarySnap.data().content);
       }
 
-      const planSnap = await getDoc(doc(db, "sellers", sellerId, "settings", "chatbot"));
-      const planData = planSnap.data();
+      const profileSnap = await getDoc(doc(db, "users", sellerId, "seller", "profile"));
+      const planData = profileSnap.data();
+      console.log("현재 요금제(plan):", planData?.plan);
       if (planData?.plan) setPlan(planData.plan);
 
       setLoading(false);
@@ -112,7 +113,7 @@ export default function SummaryCompletePage() {
       </p>
 
       <div className="flex flex-col gap-4">
-        {plan !== "free" && (
+        {plan && plan !== "free" && (
           <Button onClick={handleBot} className="w-full text-base">
             🤖 AI 챗봇 상담 시작
           </Button>
