@@ -65,7 +65,10 @@ export default function ChatBotScreen(props: ChatBotScreenProps) {
   }, [inquiryId, sellerId]);
 
   const handleSend = async (message: string) => {
-    if (!message.trim() || !inquiryId || !sellerId || !botActive) return;
+    if (!message.trim() || !inquiryId || !sellerId || !botActive) {
+      console.warn("메시지 또는 파라미터 누락", { message, inquiryId, sellerId, botActive });
+      return;
+    }
 
     const userSnap = await getDoc(doc(db, "users", sellerId));
     if (userSnap.exists() && userSnap.data()?.role === "seller") return;
@@ -76,7 +79,6 @@ export default function ChatBotScreen(props: ChatBotScreenProps) {
       senderType: "user",
       createdAt: serverTimestamp(),
     };
-
     await addDoc(messagesRef, userMessage);
 
     const systemPrompt = `당신은 고객센터 AI 챗봇입니다.
@@ -88,12 +90,31 @@ export default function ChatBotScreen(props: ChatBotScreenProps) {
 - 상담 외 질문(예: 농담, 잡담, 기능 테스트 등)은 “정확한 안내를 위해 담당자에게 전달하겠습니다”로 응답하세요
 - 모르는 내용은 상상하지 말고 “그 부분은 확인 후 안내드릴게요”로 마무리하세요`;
 
+    const chatHistory =
+      messagesSnapshot?.docs.map((doc) => {
+        const d = doc.data();
+        return `[${d.senderType}] ${d.text}`;
+      }).slice(-10) ?? [];
+
     try {
       const response = await fetch("/api/gpt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, systemPrompt, sellerId, inquiryId }),
+        body: JSON.stringify({
+          message,
+          systemPrompt,
+          sellerId,
+          inquiryId,
+          chatHistory,
+        }),
       });
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("GPT 응답 실패 (상세):", text);
+        throw new Error(`GPT 응답 실패: ${response.status}`);
+      }
+
       const data = await response.json();
       const reply = data.message ?? "죄송합니다. 응답을 생성하지 못했습니다.";
 
@@ -103,10 +124,9 @@ export default function ChatBotScreen(props: ChatBotScreenProps) {
         senderType: "bot",
         createdAt: serverTimestamp(),
       };
-
       await addDoc(messagesRef, botMessage);
     } catch (error) {
-      console.error("GPT 응답 실패", error);
+      console.error("GPT 응답 예외:", error);
     }
   };
 

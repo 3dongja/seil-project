@@ -12,7 +12,13 @@ export async function POST(req: NextRequest) {
     const { prompt, sellerId, inquiryId, model = "gpt-3.5-turbo" } = body;
 
     if (!prompt || !sellerId || !inquiryId) {
-      return NextResponse.json({ error: "필수 입력 누락" }, { status: 400 });
+      return NextResponse.json({
+        error: `필수 입력 누락: ${[
+          !prompt && "prompt",
+          !sellerId && "sellerId",
+          !inquiryId && "inquiryId",
+        ].filter(Boolean).join(", ")}`,
+      }, { status: 400 });
     }
 
     const session = await getServerSession(authOptions);

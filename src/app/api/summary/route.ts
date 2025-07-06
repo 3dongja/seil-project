@@ -1,82 +1,76 @@
-// src/app/api/summary/route.ts
+import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
+import { adminDb } from '@/lib/firebase-admin';
 
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
+export const runtime = 'edge';
 
-export async function POST(req: NextRequest) {
+const useGpt4 = false;
+
+const openai = new OpenAI({
+  apiKey: useGpt4 ? process.env.OPENAI_API_KEY_GPT40! : process.env.OPENAI_API_KEY_GPT35!,
+});
+
+export async function POST(req: Request) {
+  const { message, inquiryId, sellerId } = await req.json();
+
+  if (!message || !inquiryId || !sellerId) {
+    return new Response(
+      `Missing fields: ${[
+        !message && 'message',
+        !inquiryId && 'inquiryId',
+        !sellerId && 'sellerId',
+      ].filter(Boolean).join(', ')}`,
+      { status: 400 }
+    );
+  }
+
+  const sellerRef = adminDb.collection('users').doc(sellerId);
+  const sellerSnap = await sellerRef.get();
+  const sellerProfile = sellerSnap.exists ? sellerSnap.data() : null;
+
+  const settingsRef = adminDb.collection('sellers').doc(sellerId).collection('settings').doc('chatbot');
+  const settingsSnap = await settingsRef.get();
+  const settings = settingsSnap.exists ? settingsSnap.data() : {};
+
+  const context = `
+  [업체명] ${sellerProfile?.name ?? ''}
+  [업종] ${settings?.industry ?? sellerProfile?.category ?? ''}
+  [판매상품] ${settings?.products ?? ''}
+  [상세 설명] ${sellerProfile?.description ?? ''}
+  [상담 안내 문장] ${settings?.welcomeMessage ?? ''}
+  [유도 질문] ${settings?.promptCue ?? ''}
+  [카테고리] ${settings?.category ?? ''}
+  `;
+
+  const systemPrompt = `당신은 고객센터 요약 AI입니다. 
+판매자의 업종과 판매 품목을 참고하되, 그 외 주제나 과거 정보로 벗어나지 말고 고객의 말과 해당 판매자의 업종/상품 안에서만 집중해서 요약하세요.`;
+
+  const fullPrompt = `${systemPrompt}
+
+${context}
+
+[user] ${message}
+[summary]`;
+
   try {
-    const body = await req.json();
-    const { prompt, sellerId, inquiryId, message = "(내용 없음)", model } = body;
-
-    if (!prompt || !sellerId || !inquiryId) {
-      return NextResponse.json({ error: "필수 입력 누락" }, { status: 400 });
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[요약 프롬프트]', fullPrompt);
     }
 
-    const session = await getServerSession(authOptions);
-    const user = session?.user;
-
-    const apiKey = process.env.OPENAI_API_KEY_GPT35;
-    if (!apiKey) {
-      return NextResponse.json({ error: "API 키 누락됨" }, { status: 500 });
-    }
-
-    const configRef = doc(db, "sellers", sellerId, "settings", "chatbot");
-    const configSnap = await getDoc(configRef);
-    const config = configSnap.exists() ? configSnap.data() : {};
-
-    const industry = config?.industry || "해당 분야";
-    const product = config?.products || "제품";
-    const promptCue = config?.promptCue || "너는 정확하고 간결한 요약 AI야.";
-
-    const systemMessage = `
-${promptCue}
-- 업종: ${industry}
-- 주요 제품: ${product}
-- 요약은 명확하고 실용적으로 작성해줘.
-`.trim();
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: model?.includes("gpt-4") ? "gpt-4" : "gpt-3.5-turbo",
-        messages: [
-          { role: "system", content: systemMessage },
-          { role: "user", content: prompt },
-        ],
-      }),
+    const completion = await openai.chat.completions.create({
+      model: useGpt4 ? 'gpt-4' : 'gpt-3.5-turbo',
+      messages: [
+        {
+          role: 'user',
+          content: fullPrompt,
+        },
+      ],
     });
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error("OpenAI API 오류: " + error);
-    }
-
-    const completion = await response.json();
-    const summary = completion.choices[0].message?.content;
-
-    await addDoc(collection(db, "logs"), {
-      sellerId,
-      inquiryId,
-      user: user?.email ?? "anonymous",
-      prompt,
-      message,
-      summary,
-      model: model?.includes("gpt-4") ? "gpt-4" : "gpt-3.5-turbo",
-      createdAt: serverTimestamp(),
-      intent: "summary",
-      status: "done"
-    });
-
-    return NextResponse.json({ summary });
+    const reply = completion.choices[0]?.message?.content ?? '요약을 생성하지 못했습니다.';
+    return NextResponse.json({ summary: reply });
   } catch (error) {
-    console.error("/api/summary 에러:", error);
-    return NextResponse.json({ error: "서버 오류" }, { status: 500 });
+    console.error('요약 GPT 처리 실패:', error);
+    return new NextResponse('요약 호출 실패', { status: 500 });
   }
 }
