@@ -1,6 +1,5 @@
-import NextAuth from "next-auth"
+import NextAuth, { type NextAuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
-import type { NextAuthOptions, User } from "next-auth"
 
 const authOptions: NextAuthOptions = {
   providers: [
@@ -14,7 +13,7 @@ const authOptions: NextAuthOptions = {
     signIn: "/admin/login",
   },
   callbacks: {
-    async signIn({ user }: { user: User }) {
+    async signIn({ user }: { user: any }) {
       return user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
     },
   },
