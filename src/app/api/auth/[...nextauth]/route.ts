@@ -1,5 +1,6 @@
 import NextAuth, { type NextAuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
+import admin from "firebase-admin"
 
 // ✅ 디버그 로그 삽입 (환경 변수 누락 확인용)
 console.log("ENV::NEXTAUTH_URL =", process.env.NEXTAUTH_URL ?? "❌ NOT SET");
@@ -13,6 +14,28 @@ console.log("ENV::NEXT_PUBLIC_ADMIN_EMAIL =", process.env.NEXT_PUBLIC_ADMIN_EMAI
 console.log("ENV::FIREBASE_PROJECT_ID =", process.env.FIREBASE_PROJECT_ID ?? "❌ NOT SET");
 console.log("ENV::FIREBASE_CLIENT_EMAIL =", process.env.FIREBASE_CLIENT_EMAIL ?? "❌ NOT SET");
 console.log("ENV::FIREBASE_PRIVATE_KEY length =", process.env.FIREBASE_PRIVATE_KEY?.length ?? "❌ NOT SET");
+
+// ✅ Firebase Admin 초기화 보호
+if (!admin.apps.length) {
+  const rawKey = process.env.FIREBASE_ADMIN_KEY;
+
+  if (!rawKey) {
+    throw new Error("❌ FIREBASE_ADMIN_KEY is missing in environment variables.");
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(rawKey);
+    parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
+  } catch (error) {
+    console.error("❌ Failed to parse FIREBASE_ADMIN_KEY:", error);
+    throw error;
+  }
+
+  admin.initializeApp({
+    credential: admin.credential.cert(parsed),
+  });
+}
 
 function getAuthOptions(): NextAuthOptions {
   return {
