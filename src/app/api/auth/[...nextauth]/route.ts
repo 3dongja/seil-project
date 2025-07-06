@@ -2,26 +2,24 @@ import NextAuth, { type NextAuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import admin from "firebase-admin"
 
-// ✅ 디버그 로그 삽입 (환경 변수 누락 확인용)
-console.log("ENV::NEXTAUTH_URL =", process.env.NEXTAUTH_URL ?? "❌ NOT SET");
-console.log("ENV::NEXTAUTH_URL_INTERNAL =", process.env.NEXTAUTH_URL_INTERNAL ?? "❌ NOT SET");
-console.log("ENV::GOOGLE_CLIENT_ID =", process.env.GOOGLE_CLIENT_ID ?? "❌ NOT SET");
-console.log("ENV::GOOGLE_CLIENT_SECRET =", process.env.GOOGLE_CLIENT_SECRET ?? "❌ NOT SET");
-console.log("ENV::NEXTAUTH_SECRET =", process.env.NEXTAUTH_SECRET ?? "❌ NOT SET");
-console.log("ENV::NEXT_PUBLIC_ADMIN_EMAIL =", process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "❌ NOT SET");
+function requireEnv(key: string): string {
+  const value = process.env[key];
+  if (!value) throw new Error(`환경 변수 ${key}가 누락되었습니다.`);
+  return value;
+}
 
-// ✅ Firebase Admin 서비스 계정 정보 로그 (개별 항목 확인용)
-console.log("ENV::FIREBASE_PROJECT_ID =", process.env.FIREBASE_PROJECT_ID ?? "❌ NOT SET");
-console.log("ENV::FIREBASE_CLIENT_EMAIL =", process.env.FIREBASE_CLIENT_EMAIL ?? "❌ NOT SET");
-console.log("ENV::FIREBASE_PRIVATE_KEY length =", process.env.FIREBASE_PRIVATE_KEY?.length ?? "❌ NOT SET");
+console.log("[ENV CHECK]");
+["NEXTAUTH_URL", "NEXTAUTH_URL_INTERNAL", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "NEXTAUTH_SECRET", "NEXT_PUBLIC_ADMIN_EMAIL", "FIREBASE_PROJECT_ID", "FIREBASE_CLIENT_EMAIL", "FIREBASE_PRIVATE_KEY"].forEach(key => {
+  const val = process.env[key];
+  console.log(`ENV::${key} =`, val ? `${val.slice(0, 4)}...` : "❌ NOT SET");
+});
 
-// ✅ Firebase Admin 초기화 보호
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID!,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\n/g, "\n"),
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
+      projectId: requireEnv("FIREBASE_PROJECT_ID"),
+      privateKey: requireEnv("FIREBASE_PRIVATE_KEY").replace(/\n/g, "\\n"),
+      clientEmail: requireEnv("FIREBASE_CLIENT_EMAIL"),
     }),
   });
 }
@@ -30,17 +28,17 @@ function getAuthOptions(): NextAuthOptions {
   return {
     providers: [
       GoogleProvider({
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        clientId: requireEnv("GOOGLE_CLIENT_ID"),
+        clientSecret: requireEnv("GOOGLE_CLIENT_SECRET"),
       }),
     ],
-    secret: process.env.NEXTAUTH_SECRET,
+    secret: requireEnv("NEXTAUTH_SECRET"),
     pages: {
       signIn: "/admin/login",
     },
     callbacks: {
       async signIn({ user }: { user: any }) {
-        return user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+        return user.email === requireEnv("NEXT_PUBLIC_ADMIN_EMAIL");
       },
     },
   };
