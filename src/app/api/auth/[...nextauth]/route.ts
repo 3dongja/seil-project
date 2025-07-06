@@ -26,9 +26,12 @@ if (!admin.apps.length) {
   let parsed;
   try {
     parsed = JSON.parse(rawKey);
+    if (!parsed.private_key) {
+      throw new Error("❌ parsed.private_key is undefined.");
+    }
     parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
   } catch (error) {
-    console.error("❌ Failed to parse FIREBASE_ADMIN_KEY:", error);
+    console.error("❌ Failed to parse FIREBASE_ADMIN_KEY or private_key missing:", error);
     throw error;
   }
 
