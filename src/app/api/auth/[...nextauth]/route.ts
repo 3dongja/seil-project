@@ -27,9 +27,9 @@ if (!admin.apps.length) {
       authUri: process.env.FIREBASE_AUTH_URI!,
       tokenUri: process.env.FIREBASE_TOKEN_URI!,
       authProviderX509CertUrl: process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL!,
-      clientC509CertUrl: process.env.FIREBASE_CLIENT_X509_CERT_URL!,
+      clientX509CertUrl: process.env.FIREBASE_CLIENT_X509_CERT_URL!,
       universeDomain: process.env.FIREBASE_UNIVERSE_DOMAIN!,
-    } as any), // 강제 우회 (Firebase Admin SDK 타입 불일치 이슈 회피)
+    } as any),
   });
 }
 
