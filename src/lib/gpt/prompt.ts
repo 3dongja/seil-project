@@ -24,11 +24,17 @@ export function buildPrompt(userInfo: {
 /**
  * 요약 요청을 GPT API에 보냅니다.
  */
-export async function generateSummary(prompt: string): Promise<string> {
+export async function generateSummary({
+  prompt,
+  sellerId,
+}: {
+  prompt: string;
+  sellerId: string;
+}): Promise<string> {
   const res = await fetch("/api/summary", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({ prompt, sellerId }),
   });
 
   if (!res.ok) throw new Error("GPT 요약 실패");

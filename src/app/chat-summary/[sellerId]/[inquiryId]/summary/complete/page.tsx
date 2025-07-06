@@ -53,7 +53,7 @@ export default function SummaryCompletePage() {
       const summarySnap = await getDoc(summaryRef);
       if (!summarySnap.exists()) {
         const prompt = buildPrompt({ name: data.name, phone: data.phone, details: data.details });
-        await generateSummary(prompt);
+        await generateSummary({ prompt, sellerId });
         await setDoc(summaryRef, {
           content: message ?? "(내용 없음)",
           createdAt: serverTimestamp(),
