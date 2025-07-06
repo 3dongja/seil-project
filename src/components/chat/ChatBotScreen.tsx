@@ -30,7 +30,8 @@ export default function ChatBotScreen(props: ChatBotScreenProps) {
 
   const dummy = useRef<HTMLDivElement>(null!);
 
-  const messagesRef = collection(db, "chats", inquiryId!, "messages");
+  // ✅ 메시지 저장 경로 수정됨
+  const messagesRef = collection(db, "sellers", sellerId!, "inquiries", inquiryId!, "chatMessages");
   const q = query(messagesRef, orderBy("createdAt"));
   const [messagesSnapshot] = useCollection(q);
   useAutoScroll(messagesSnapshot, dummy);
