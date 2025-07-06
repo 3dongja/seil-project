@@ -5,8 +5,9 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, getDoc, collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
 import { v4 as uuid } from "uuid";
+import Image from "next/image";
 
 const validateName = (name: string) => /^[가-힣a-zA-Z\s]{2,20}$/.test(name);
 const validatePhone = (phone: string) => /^01[016789]-\d{3,4}-\d{4}$/.test(phone);
@@ -70,18 +71,33 @@ const ChatSummaryPage = () => {
     }
 
     setLoading(true);
-    const id = uuid();
 
     try {
-      const refDoc = doc(db, "sellers", sellerId, "inquiries", id);
-      await setDoc(refDoc, {
-        name, phone, email,
-        createdAt: serverTimestamp(),
-      });
+      const q = query(
+        collection(db, "sellers", sellerId, "inquiries"),
+        where("name", "==", name),
+        where("phone", "==", phone),
+        orderBy("createdAt", "desc"),
+        limit(1)
+      );
+      const snapshot = await getDocs(q);
+
+      let inquiryId: string;
+      if (!snapshot.empty) {
+        inquiryId = snapshot.docs[0].id;
+      } else {
+        inquiryId = uuid();
+        await setDoc(doc(db, "sellers", sellerId, "inquiries", inquiryId), {
+          name,
+          phone,
+          email,
+          createdAt: serverTimestamp(),
+        });
+      }
 
       localStorage.setItem("sellerId", sellerId);
-      localStorage.setItem("inquiryId", id);
-      router.push(`/chat-summary/${sellerId}/${id}/summary`);
+      localStorage.setItem("inquiryId", inquiryId);
+      router.push(`/chat-summary/${sellerId}/${inquiryId}/summary`);
     } catch (err) {
       console.error("저장 중 오류:", err);
       alert("저장 중 오류가 발생했습니다.");
@@ -91,43 +107,48 @@ const ChatSummaryPage = () => {
   };
 
   return (
-    <main className="p-4 space-y-4 max-w-md mx-auto">
-      <h1 className="text-xl font-bold text-center">간편 상담 시작</h1>
-      <p className="text-sm text-center text-gray-500">
-        {openTime && closeTime ? `운영시간 ${openTime} ~ ${closeTime}` : "운영 시간 확인 중..."}
-      </p>
-
-      <div className="space-y-2 relative">
-        <input className="w-full border rounded p-2 text-sm" placeholder="이름" value={name} onChange={(e) => setName(e.target.value)} />
-        <input className="w-full border rounded p-2 text-sm" placeholder="연락처 (예: 010-1234-5678)" value={phone} onChange={(e) => handlePhoneInput(e.target.value)} />
-        <div className="relative">
-          <input
-            className="w-full border rounded p-2 text-sm"
-            placeholder="이메일 (선택)"
-            value={email}
-            onFocus={() => setEmailInputFocus(true)}
-            onBlur={() => setTimeout(() => setEmailInputFocus(false), 100)}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          {emailInputFocus && email.includes("@") && (
-            <ul className="absolute z-10 bg-white border rounded w-full mt-1 text-sm shadow">
-              {emailSuggestions.map(domain => (
-                <li
-                  key={domain}
-                  onClick={() => handleEmailSuggestion(domain)}
-                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
-                >
-                  {email.split("@")[0]}@{domain}
-                </li>
-              ))}
-            </ul>
-          )}
+    <main className="min-h-screen flex flex-col justify-center items-center p-6 bg-gray-50">
+      <div className="w-full max-w-md space-y-6 bg-white p-6 rounded-xl shadow">
+        <div className="flex justify-center">
+          <Image src="/logo-light.PNG" alt="Logo" width={160} height={50} priority />
         </div>
-      </div>
+        <h1 className="text-xl font-bold text-center">간편 상담 시작</h1>
+        <p className="text-sm text-center text-gray-500">
+          {openTime && closeTime ? `운영시간 ${openTime} ~ ${closeTime}` : "운영 시간 확인 중..."}
+        </p>
 
-      <div className="flex justify-between gap-2 pt-4">
-        <button onClick={() => router.back()} className="w-1/2 py-3 bg-gray-200 rounded font-semibold">뒤로가기</button>
-        <button onClick={handleSave} className="w-1/2 py-3 bg-blue-600 text-white rounded font-bold" disabled={loading}>{loading ? "처리 중..." : "상담 시작"}</button>
+        <div className="space-y-2 relative">
+          <input className="w-full border rounded p-2 text-sm" placeholder="이름" value={name} onChange={(e) => setName(e.target.value)} />
+          <input className="w-full border rounded p-2 text-sm" placeholder="연락처 (예: 010-1234-5678)" value={phone} onChange={(e) => handlePhoneInput(e.target.value)} />
+          <div className="relative">
+            <input
+              className="w-full border rounded p-2 text-sm"
+              placeholder="이메일 (선택)"
+              value={email}
+              onFocus={() => setEmailInputFocus(true)}
+              onBlur={() => setTimeout(() => setEmailInputFocus(false), 100)}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            {emailInputFocus && email.includes("@") && (
+              <ul className="absolute z-10 bg-white border rounded w-full mt-1 text-sm shadow">
+                {emailSuggestions.map(domain => (
+                  <li
+                    key={domain}
+                    onClick={() => handleEmailSuggestion(domain)}
+                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                  >
+                    {email.split("@")[0]}@{domain}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div className="flex justify-between gap-2 pt-4">
+          <button onClick={() => router.back()} className="w-1/2 py-3 bg-gray-200 rounded font-semibold">뒤로가기</button>
+          <button onClick={handleSave} className="w-1/2 py-3 bg-blue-600 text-white rounded font-bold" disabled={loading}>{loading ? "처리 중..." : "상담 시작"}</button>
+        </div>
       </div>
     </main>
   );
