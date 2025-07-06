@@ -9,9 +9,9 @@ import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/fires
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { prompt, sellerId, inquiryId, message, model } = body;
+    const { prompt, sellerId, inquiryId, message = "(내용 없음)", model } = body;
 
-    if (!prompt || !sellerId || !inquiryId || !message) {
+    if (!prompt || !sellerId || !inquiryId) {
       return NextResponse.json({ error: "필수 입력 누락" }, { status: 400 });
     }
 

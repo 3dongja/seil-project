@@ -1,3 +1,5 @@
+// src/components/chat/ChatBotScreen.tsx
+
 "use client";
 
 import { useEffect, useState, useRef } from "react";
@@ -5,7 +7,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCollection } from "react-firebase-hooks/firestore";
 import { useAuth } from "@/AuthContext";
 import { useAutoScroll } from "@/useAutoScroll";
-import { doc, getDoc, serverTimestamp, collection, addDoc, updateDoc, query, orderBy, onSnapshot } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  serverTimestamp,
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  onSnapshot,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import useUserRoles from "@/hooks/useUserRoles";
 import ChatMessageList from "@/components/chat/ChatMessageList";
@@ -30,8 +41,14 @@ export default function ChatBotScreen(props: ChatBotScreenProps) {
 
   const dummy = useRef<HTMLDivElement>(null!);
 
-  // ✅ 메시지 저장 경로 수정됨
-  const messagesRef = collection(db, "sellers", sellerId!, "inquiries", inquiryId!, "chatMessages");
+  const messagesRef = collection(
+    db,
+    "sellers",
+    sellerId!,
+    "inquiries",
+    inquiryId!,
+    "chatMessages"
+  );
   const q = query(messagesRef, orderBy("createdAt"));
   const [messagesSnapshot] = useCollection(q);
   useAutoScroll(messagesSnapshot, dummy);
@@ -75,15 +92,18 @@ export default function ChatBotScreen(props: ChatBotScreenProps) {
       const response = await fetch("/api/gpt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, systemPrompt }),
+        body: JSON.stringify({ message, systemPrompt, sellerId, inquiryId }),
       });
       const data = await response.json();
+      const reply = data.message ?? "죄송합니다. 응답을 생성하지 못했습니다.";
+
       const botMessage = {
-        text: data.reply,
+        text: reply,
         senderId: "chatbot",
         senderType: "bot",
         createdAt: serverTimestamp(),
       };
+
       await addDoc(messagesRef, botMessage);
     } catch (error) {
       console.error("GPT 응답 실패", error);
@@ -94,7 +114,10 @@ export default function ChatBotScreen(props: ChatBotScreenProps) {
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto px-4">
         <ChatMessageList
-          messages={messagesSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() }))}
+          messages={messagesSnapshot?.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))}
           userType={(user as any)?.role ?? "consumer"}
           sellerId={sellerId ?? ""}
           inquiryId={inquiryId ?? ""}

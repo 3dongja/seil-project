@@ -1,68 +1,79 @@
 // src/app/api/gpt/route.ts
-import { NextRequest } from "next/server";
-import OpenAI from "openai";
-import generatePrompt from "@/lib/prompt-engine/index";
-import { adminDb, adminAuth } from "@/lib/firebase-admin";
+
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, role, intent, model = "gpt-3.5-turbo", details } = await req.json();
-    if (!message || !role || !intent) {
-      return new Response("message, role, intent는 필수입니다", { status: 400 });
+    const body = await req.json();
+    const { prompt, sellerId, inquiryId, model = "gpt-3.5-turbo" } = body;
+
+    if (!prompt || !sellerId || !inquiryId) {
+      return NextResponse.json({ error: "필수 입력 누락" }, { status: 400 });
     }
 
-    // 인증 토큰 확인
-    const authHeader = req.headers.get("authorization");
-    const token = authHeader?.split("Bearer ")[1];
-    if (!token) {
-      return new Response("인증 토큰 없음", { status: 401 });
-    }
+    const session = await getServerSession(authOptions);
+    const user = session?.user;
 
-    const decoded = await adminAuth.verifyIdToken(token);
-    const sellerId = decoded.uid;
-
-    // GPT API 키 선택 (gpt-4를 위한 구조도 미리 포함)
-    const apiKey = model.includes("gpt-4")
-      ? process.env.OPENAI_API_KEY_GPT40
-      : process.env.OPENAI_API_KEY_GPT35;
-
+    const apiKey = process.env.OPENAI_API_KEY_GPT35;
     if (!apiKey) {
-      console.error("OpenAI API 키가 설정되지 않았습니다.");
-      return new Response("API 키 없음", { status: 500 });
+      return NextResponse.json({ error: "API 키 누락됨" }, { status: 500 });
     }
 
-    // 프롬프트 생성
-    const systemPrompt = await generatePrompt({ role, intent, sellerId });
+    const systemPrompt = `너는 고객 지원 챗봇이야. 고객의 문의에 대해 간단하고 정중하게 답변해줘.`;
 
-    const openai = new OpenAI({ apiKey });
-    const completion = await openai.chat.completions.create({
-      model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: message },
-      ],
-      temperature: 0.7,
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: model.includes("gpt-4") ? "gpt-4" : "gpt-3.5-turbo",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt },
+        ],
+      }),
     });
 
-    const content = completion.choices[0].message?.content?.trim() ?? "";
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("OpenAI API 오류 응답:", errorText);
+      return NextResponse.json({ error: "OpenAI 오류: " + errorText }, { status: 500 });
+    }
 
-    // 요청 로그 저장
-    await adminDb.collection("logs").add({
+    let completion;
+    try {
+      completion = await response.json();
+    } catch (jsonError) {
+      console.error("GPT 응답 JSON 파싱 오류:", jsonError);
+      return NextResponse.json({ error: "GPT 응답 파싱 실패" }, { status: 500 });
+    }
+
+    const message = completion.choices?.[0]?.message?.content;
+    if (!message) {
+      return NextResponse.json({ error: "GPT 응답이 비어 있음" }, { status: 500 });
+    }
+
+    await addDoc(collection(db, "logs"), {
       sellerId,
-      type: intent,
+      inquiryId,
+      user: user?.email ?? "anonymous",
+      prompt,
       message,
-      reply: content,
-      details: details ?? null,
-      createdAt: Date.now(),
+      model,
+      createdAt: serverTimestamp(),
+      intent: "chat",
+      status: "done",
     });
 
-    if (intent === "summary") {
-      return Response.json({ summary: content });
-    }
-
-    return Response.json({ reply: content });
-  } catch (e) {
-    console.error("GPT 처리 오류:", e);
-    return new Response("서버 오류", { status: 500 });
+    return NextResponse.json({ message });
+  } catch (err) {
+    console.error("/api/gpt 에러:", err);
+    return NextResponse.json({ error: "서버 오류" }, { status: 500 });
   }
 }
