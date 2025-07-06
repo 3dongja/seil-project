@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { adminDb } from "@/lib/firebase-admin";
+import { adminDb, serverTimestamp } from "@/lib/firebase-admin"; // ✅ 수정됨
 import admin from "firebase-admin"; // ✅ 추가
 
 export async function POST(req: NextRequest) {
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
         prompt,
         message,
         model: selectedModel,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(), // ✅ 수정
+        createdAt: serverTimestamp(), // ✅ 수정됨
         intent: "chat",
         status: "done",
       });
