@@ -1,8 +1,8 @@
+export const runtime = "nodejs";
+
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { adminDb } from '@/lib/firebase-admin';
-
-export const runtime = 'edge';
 
 const useGpt4 = false;
 
