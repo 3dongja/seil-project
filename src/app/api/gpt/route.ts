@@ -46,11 +46,13 @@ export async function POST(req: NextRequest) {
 
     const messages = [
       { role: "system", content: systemPrompt },
-      ...chatHistory.map((line: string) => {
+      ...chatHistory
+       .filter((line: any) => typeof line === "string")
+        .map((line: string) => {
         const role = line.startsWith("[user]") ? "user" : "assistant";
         const content = line.replace(/^\[[^\]]+\]\s*/, "");
         return { role, content };
-      }),
+       }),
       { role: "user", content: message },
     ];
 

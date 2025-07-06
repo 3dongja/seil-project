@@ -3,8 +3,9 @@ import type { Configuration } from "webpack";
 import webpack from "webpack";
 
 const nextConfig: NextConfig = {
+  productionBrowserSourceMaps: true,
   experimental: {
-    serverActions: {},
+  serverActions: {},
   },
   webpack(config: Configuration, options: any) {
     config.resolve = config.resolve || {};

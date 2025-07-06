@@ -52,7 +52,7 @@ const ChatSummaryPage = () => {
 
   const handleEmailSuggestion = (domain: string) => {
   if (!email.includes("@")) return;
-  const [local] = (email ?? "").split("@");
+  const [local] = typeof email === "string" ? email.split("@") : [];
   setEmail(`${local}@${domain}`);
   setEmailInputFocus(false);
   };
@@ -143,7 +143,10 @@ const ChatSummaryPage = () => {
                     onClick={() => handleEmailSuggestion(domain)}
                     className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
                   >
-                    {email.includes("@") ? `${(email ?? "").split("@")[0]}@${domain}` : `@${domain}`}
+                    {typeof email === "string" && email.includes("@")
+                   ? `${email.split("@")[0]}@${domain}`
+                   : `@${domain}`}
+
                   </li>
                 ))}
               </ul>

@@ -29,24 +29,26 @@ export default function WritePage() {
   }, [])
 
   const handleSubmit = async () => {
-    if (!user || !title || !content || !category) return alert("모든 필드를 입력해주세요.")
-    await addDoc(collection(db, `community/${category}/posts`), {
-      title,
-      content,
-      author: user.displayName || "익명",
-      uid: user.uid,
-      createdAt: Timestamp.now(),
-      tags: tags
-        .split("#")
-        .map(t => t.trim())
-        .filter(t => t),
-      category,
-      likes: 0,
-      commentCount: 0,
-      views: 0,
-      topFixed: false,
-      dailyTop: false
-    })
+  if (!user || !title || !content || !category)
+    return alert("모든 필드를 입력해주세요.");
+
+  await addDoc(collection(db, `community/${category}/posts`), {
+    title,
+    content,
+    author: user.displayName || "익명",
+    uid: user.uid,
+    createdAt: Timestamp.now(),
+    tags: (tags ?? "")
+      .split("#")
+      .map((t: string) => t.trim())
+      .filter((t) => t),
+    category,
+    likes: 0,
+    commentCount: 0,
+    views: 0,
+    topFixed: false,
+    dailyTop: false
+  })
     localStorage.removeItem("communityDraft")
     router.push(`/community/${category}`)
   }

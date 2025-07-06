@@ -35,14 +35,14 @@ export default function SellerStatsPage() {
         timeMap[date.getHours()]++
         dayMap[date.getDay()]++
 
-        const text = data.content || ""
-        text
-          .replace(/[^가-힣a-zA-Z0-9]/g, " ")
-          .split(" ")
-          .filter((w: string) => w.length >= 2)
-          .forEach((word: string) => {
-            wordCount[word] = (wordCount[word] || 0) + 1
-          })
+       const text = data.content || "";
+       text
+       .replace(/[^가-힣a-zA-Z0-9]/g, " ")
+       .split(" ")
+       .filter((w: string) => w.length >= 2)
+       .forEach((word: string) => {
+       wordCount[word] = (wordCount[word] || 0) + 1;
+      })
 
         const cat = data.summary?.category || "기타"
         catCount[cat] = (catCount[cat] || 0) + 1

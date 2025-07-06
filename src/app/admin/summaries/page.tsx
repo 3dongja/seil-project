@@ -27,7 +27,7 @@ export default function AdminSummariesPage() {
       snapshot.forEach((doc) => {
         const data = doc.data() as DocumentData;
         if (data.summary) {
-          const pathSegments = doc.ref.path.split("/");
+          const pathSegments = typeof doc?.ref?.path === "string" ? doc.ref.path.split("/") : [];
           const sellerId = pathSegments[1];
           const inquiryId = pathSegments[3];
           items.push({

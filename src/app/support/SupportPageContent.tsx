@@ -29,7 +29,7 @@ export default function SupportPageContent() {
   useEffect(() => {
     const reason = searchParams.get("reason");
     if (reason?.startsWith("upgrade")) {
-      const plan = reason.split("-")[1];
+      const plan = (reason ?? "").split("-")[1];
       const planName = plan === "premium" ? "프리미엄 요금제" : plan === "basic" ? "베이직 요금제" : "";
       setMessage(`요금제를 ${planName}로 업그레이드하고 싶습니다.`);
     }
