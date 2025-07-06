@@ -1,4 +1,4 @@
-// ✅ src/lib/gpt/prompt.ts
+"use client";
 
 /**
  * GPT에게 전달할 프롬프트를 구성합니다.
@@ -27,14 +27,18 @@ export function buildPrompt(userInfo: {
 export async function generateSummary({
   prompt,
   sellerId,
+  inquiryId,
+  message,
 }: {
   prompt: string;
   sellerId: string;
+  inquiryId: string;
+  message: string;
 }): Promise<string> {
   const res = await fetch("/api/summary", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, sellerId }),
+    body: JSON.stringify({ prompt, sellerId, inquiryId, message }),
   });
 
   if (!res.ok) throw new Error("GPT 요약 실패");

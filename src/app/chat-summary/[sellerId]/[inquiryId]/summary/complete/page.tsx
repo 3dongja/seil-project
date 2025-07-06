@@ -51,22 +51,33 @@ export default function SummaryCompletePage() {
 
       const summaryRef = doc(db, "sellers", sellerId, "inquiries", inquiryId, "summary", "auto");
       const summarySnap = await getDoc(summaryRef);
-      if (!summarySnap.exists()) {
-        const prompt = buildPrompt({ name: data.name, phone: data.phone, details: data.details });
-        await generateSummary({ prompt, sellerId });
-        await setDoc(summaryRef, {
-          content: message ?? "(내용 없음)",
-          createdAt: serverTimestamp(),
-          sellerId,
-          inquiryId,
-          state: "done"
-        });
-        setSummary(message ?? "(내용 없음)");
-      } else {
-        setSummary(summarySnap.data().content);
-      }
 
-      const profileSnap = await getDoc(doc(db, "users", sellerId, "seller", "profile"));
+     if (!summarySnap.exists()) {
+     const prompt = buildPrompt({ name: data.name, phone: data.phone, details: data.details });
+
+     // GPT 요약 응답값 저장
+     const summary = await generateSummary({
+      prompt,
+      sellerId,
+      inquiryId,
+      message: data.details ?? "(내용 없음)",
+      });
+
+  await setDoc(summaryRef, {
+    content: summary,
+    createdAt: serverTimestamp(),
+    sellerId,
+    inquiryId,
+    state: "done"
+  });
+
+  setSummary(summary);
+} else {
+  setSummary(summarySnap.data().content);
+}
+
+
+      const profileSnap = await getDoc(doc(db, "sellers", sellerId, "profile"));
       const planData = profileSnap.data();
       console.log("현재 요금제(plan):", planData?.plan);
       if (planData?.plan) setPlan(planData.plan);
