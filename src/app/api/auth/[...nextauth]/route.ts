@@ -21,10 +21,18 @@ if (!raw) {
 }
 
 if (!admin.apps.length) {
-  const serviceAccount = JSON.parse(raw);
+  let parsed = {};
+  try {
+    parsed = JSON.parse(
+      raw.replace(/\\n/g, "\n") // 🔥 Vercel에 등록된 \n 줄바꿈 복원
+    );
+  } catch (e) {
+    console.error("❌ FIREBASE_ADMIN_KEY JSON 파싱 실패", e);
+    throw new Error("FIREBASE_ADMIN_KEY가 유효한 JSON이 아닙니다.");
+  }
 
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
+    credential: admin.credential.cert(parsed as admin.ServiceAccount),
   });
 }
 
