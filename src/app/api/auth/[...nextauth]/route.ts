@@ -2,6 +2,8 @@ import NextAuth, { type NextAuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import admin from "firebase-admin"
 
+console.log("🚀 route.ts loading at build time");
+
 function requireEnv(key: string): string {
   const value = process.env[key];
   if (!value) throw new Error(`환경 변수 ${key}가 누락되었습니다.`);
@@ -26,6 +28,7 @@ if (!admin.apps.length) {
     parsed = JSON.parse(
       raw.replace(/\\n/g, "\n") // 🔥 Vercel에 등록된 \n 줄바꿈 복원
     );
+    console.log("✅ FIREBASE_ADMIN_KEY 파싱 성공. 키들:", Object.keys(parsed));
   } catch (e) {
     console.error("❌ FIREBASE_ADMIN_KEY JSON 파싱 실패", e);
     throw new Error("FIREBASE_ADMIN_KEY가 유효한 JSON이 아닙니다.");
