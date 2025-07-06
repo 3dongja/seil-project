@@ -1,4 +1,4 @@
-"use client";
+
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
@@ -52,32 +52,33 @@ export default function SummaryCompletePage() {
       const summaryRef = doc(db, "sellers", sellerId, "inquiries", inquiryId, "summary", "auto");
       const summarySnap = await getDoc(summaryRef);
 
-     if (!summarySnap.exists()) {
-     const prompt = buildPrompt({ name: data.name, phone: data.phone, details: data.details });
+      if (!summarySnap.exists()) {
+        const prompt = buildPrompt({ name: data.name, phone: data.phone, details: data.details });
 
-     // GPT 요약 응답값 저장
-     const summary = await generateSummary({
-      prompt,
-      sellerId,
-      inquiryId,
-      message: data.details ?? "(내용 없음)",
-      });
+        // GPT 요약 응답값 저장
+        const summary = await generateSummary({
+          prompt,
+          sellerId,
+          inquiryId,
+          message: data.details ?? "(내용 없음)",
+        });
 
-  await setDoc(summaryRef, {
-    content: summary,
-    createdAt: serverTimestamp(),
-    sellerId,
-    inquiryId,
-    state: "done"
-  });
+        await setDoc(summaryRef, {
+          content: summary,
+          createdAt: serverTimestamp(),
+          sellerId,
+          inquiryId,
+          state: "done"
+        });
 
-  setSummary(summary);
-} else {
-  setSummary(summarySnap.data().content);
-}
+        setSummary(summary);
+      } else {
+        setSummary(summarySnap.data().content);
+      }
 
-
-      const profileSnap = await getDoc(doc(db, "sellers", sellerId, "profile"));
+      // ✅ 안정적인 요금제 데이터 불러오기
+      const sellerDocRef = doc(db, "sellers", sellerId);
+      const profileSnap = await getDoc(sellerDocRef);
       const planData = profileSnap.data();
       console.log("현재 요금제(plan):", planData?.plan);
       if (planData?.plan) setPlan(planData.plan);

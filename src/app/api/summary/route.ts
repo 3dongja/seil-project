@@ -1,33 +1,28 @@
-// ✅ src/app/api/summary/route.ts
+// src/app/api/summary/route.ts
 
-import { NextResponse } from "next/server";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
-import { initializeApp, getApps } from "firebase/app";
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
 
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-};
-
-if (getApps().length === 0) {
-  initializeApp(firebaseConfig);
-}
-const db = getFirestore();
-
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const { prompt, sellerId } = await req.json();
-    if (!prompt || typeof prompt !== "string" || !sellerId) {
-      return NextResponse.json({ error: "프롬프트 또는 판매자 ID 누락" }, { status: 400 });
+    const body = await req.json();
+    const { prompt, sellerId, inquiryId, message, model } = body;
+
+    if (!prompt || !sellerId || !inquiryId || !message) {
+      return NextResponse.json({ error: "필수 입력 누락" }, { status: 400 });
     }
+
+    const session = await getServerSession(authOptions);
+    const user = session?.user;
 
     const apiKey = process.env.OPENAI_API_KEY_GPT35;
     if (!apiKey) {
       return NextResponse.json({ error: "API 키 누락됨" }, { status: 500 });
     }
 
-    // Firestore에서 seller 설정 불러오기
     const configRef = doc(db, "sellers", sellerId, "settings", "chatbot");
     const configSnap = await getDoc(configRef);
     const config = configSnap.exists() ? configSnap.data() : {};
@@ -50,25 +45,38 @@ ${promptCue}
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo",
+        model: model?.includes("gpt-4") ? "gpt-4" : "gpt-3.5-turbo",
         messages: [
           { role: "system", content: systemMessage },
           { role: "user", content: prompt },
         ],
-        temperature: 0.5,
-        max_tokens: 300,
       }),
     });
 
-    const data = await response.json();
-    const summary = data?.choices?.[0]?.message?.content?.trim();
-    if (!summary) {
-      return NextResponse.json({ error: "요약 결과가 없습니다." }, { status: 500 });
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error("OpenAI API 오류: " + error);
     }
 
+    const completion = await response.json();
+    const summary = completion.choices[0].message?.content;
+
+    await addDoc(collection(db, "logs"), {
+      sellerId,
+      inquiryId,
+      user: user?.email ?? "anonymous",
+      prompt,
+      message,
+      summary,
+      model: model?.includes("gpt-4") ? "gpt-4" : "gpt-3.5-turbo",
+      createdAt: serverTimestamp(),
+      intent: "summary",
+      status: "done"
+    });
+
     return NextResponse.json({ summary });
-  } catch (err) {
-    console.error("GPT 요약 실패:", err);
-    return NextResponse.json({ error: "서버 오류 - GPT 처리 실패" }, { status: 500 });
+  } catch (error) {
+    console.error("/api/summary 에러:", error);
+    return NextResponse.json({ error: "서버 오류" }, { status: 500 });
   }
 }
